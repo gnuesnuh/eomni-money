@@ -25,8 +25,12 @@ COPY packages/shared packages/shared
 COPY apps/api apps/api
 
 # Prisma client 생성 + shared 빌드 + api 빌드
+# `prisma generate` 는 schema 의 datasource.url=env("DATABASE_URL") 를 파싱하느라
+# 빌드 타임에도 환경변수를 요구함. 실제 DB 연결은 안 하므로 placeholder 면 OK.
+# 운영 DB URL 은 Railway Variables 로 컨테이너 시작 시 주입됨.
 RUN npm run build -w @eomni/shared
-RUN npx -w @eomni/api prisma generate --schema apps/api/prisma/schema.prisma
+RUN DATABASE_URL="postgresql://placeholder:placeholder@placeholder:5432/placeholder" \
+    npx -w @eomni/api prisma generate --schema apps/api/prisma/schema.prisma
 RUN npm run build -w @eomni/api
 
 # ─────────────────────────────────────────────
