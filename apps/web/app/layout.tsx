@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_KR, Gowun_Dodum } from "next/font/google";
+import { LocaleProvider } from "@/lib/i18n";
 import "./globals.css";
 
 const notoKr = Noto_Sans_KR({
@@ -37,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${notoKr.variable} ${display.variable}`}>
       <body className="min-h-screen bg-stone-50 text-gray-900 antialiased font-sans">
-        {children}
+        <LocaleProvider>{children}</LocaleProvider>
       </body>
     </html>
   );

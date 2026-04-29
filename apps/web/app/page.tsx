@@ -5,14 +5,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useProfile } from "@/lib/profile";
 import { isSupabaseConfigured, signInWithKakao } from "@/lib/supabase/client";
+import { useLocale, useT, type Messages } from "@/lib/i18n";
+
+const PURPLE = "#534AB7";
+const TEAL = "#1D9E75";
 
 export default function LandingPage() {
   const router = useRouter();
   const { profile, loaded } = useProfile();
+  const t = useT();
   const [authError, setAuthError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // ?error= 쿼리 표시
   useEffect(() => {
     if (typeof window === "undefined") return;
     const u = new URL(window.location.href);
@@ -21,7 +25,6 @@ export default function LandingPage() {
   }, []);
 
   async function handleStart() {
-    // 이미 프로필 있는 사용자 → 피드로
     if (profile) {
       router.push("/feed");
       return;
@@ -30,7 +33,7 @@ export default function LandingPage() {
     setAuthError(null);
     try {
       if (!isSupabaseConfigured()) {
-        router.push("/onboarding"); // OAuth 미설정 시 로컬 온보딩
+        router.push("/onboarding");
         return;
       }
       await signInWithKakao("/onboarding");
@@ -40,39 +43,34 @@ export default function LandingPage() {
     }
   }
 
-  // 로그인된 사용자 vs 신규 사용자 구분 (로딩 중엔 신규로 가정)
   const hasProfile = loaded && !!profile;
 
   return (
     <div className="min-h-screen bg-stone-50 text-gray-900">
-      <NavBar onStart={handleStart} busy={busy} hasProfile={hasProfile} />
+      <NavBar onStart={handleStart} busy={busy} hasProfile={hasProfile} t={t} />
 
       {authError && (
         <div className="mx-4 mt-20 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          로그인 실패: {authError}
+          {t.authError}: {authError}
         </div>
       )}
 
-      <Hero onStart={handleStart} busy={busy} hasProfile={hasProfile} />
+      <Hero onStart={handleStart} busy={busy} hasProfile={hasProfile} t={t} />
       <Divider />
-      <HowItWorks />
+      <HowItWorks t={t} />
       <Divider />
-      <Speakers />
+      <Speakers t={t} />
       <Divider />
-      <Features />
+      <Features t={t} />
       <Divider />
-      <Pricing onStart={handleStart} hasProfile={hasProfile} />
-      <Referral />
+      <Pricing onStart={handleStart} t={t} />
+      <Referral t={t} />
       <Divider />
-      <FinalCta onStart={handleStart} busy={busy} hasProfile={hasProfile} />
-      <Footer />
+      <FinalCta onStart={handleStart} busy={busy} hasProfile={hasProfile} t={t} />
+      <Footer t={t} />
     </div>
   );
 }
-
-const PURPLE = "#534AB7";
-const PURPLE_LIGHT = "#EEEDFE";
-const TEAL = "#1D9E75";
 
 // ───────────────────────────────────────────
 // NAV
@@ -81,25 +79,60 @@ function NavBar({
   onStart,
   busy,
   hasProfile,
+  t,
 }: {
   onStart: () => void;
   busy: boolean;
   hasProfile: boolean;
+  t: Messages;
 }) {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-stone-50/90 backdrop-blur border-b border-stone-200">
-      <div className="font-display text-xl font-bold tracking-tight">
-        <span style={{ color: PURPLE }}>엄니</span>
-        <span style={{ color: "#EF9F27" }}>머니</span>
+    <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-stone-50/90 backdrop-blur border-b border-stone-200 gap-2">
+      <div className="font-display text-xl font-bold tracking-tight whitespace-nowrap">
+        <span style={{ color: PURPLE }}>{t.brand.name1}</span>
+        <span style={{ color: "#EF9F27" }}>{t.brand.name2}</span>
       </div>
-      <button
-        onClick={onStart}
-        disabled={busy}
-        className="rounded-full bg-[#534AB7] hover:bg-[#3C3489] text-white text-sm font-medium px-5 py-2.5 transition disabled:opacity-50"
-      >
-        {busy ? "이동 중..." : hasProfile ? "내 피드로 가기 →" : "카카오로 시작하기"}
-      </button>
+      <div className="flex items-center gap-2">
+        <LangSwitch />
+        <button
+          onClick={onStart}
+          disabled={busy}
+          className="rounded-full bg-[#534AB7] hover:bg-[#3C3489] text-white text-xs sm:text-sm font-medium px-4 py-2.5 transition disabled:opacity-50 whitespace-nowrap"
+        >
+          {busy ? "..." : hasProfile ? t.nav.ctaForLogged : t.nav.cta}
+        </button>
+      </div>
     </nav>
+  );
+}
+
+function LangSwitch() {
+  const { locale, setLocale } = useLocale();
+  return (
+    <div className="flex items-center bg-white border border-stone-200 rounded-full overflow-hidden text-xs">
+      <button
+        onClick={() => setLocale("ko")}
+        className={`px-2.5 py-1.5 transition ${
+          locale === "ko"
+            ? "bg-[#534AB7] text-white font-semibold"
+            : "text-gray-500 hover:text-gray-900"
+        }`}
+        aria-label="한국어"
+      >
+        KO
+      </button>
+      <button
+        onClick={() => setLocale("ja")}
+        className={`px-2.5 py-1.5 transition ${
+          locale === "ja"
+            ? "bg-[#534AB7] text-white font-semibold"
+            : "text-gray-500 hover:text-gray-900"
+        }`}
+        aria-label="日本語"
+      >
+        JA
+      </button>
+    </div>
   );
 }
 
@@ -110,40 +143,38 @@ function Hero({
   onStart,
   busy,
   hasProfile,
+  t,
 }: {
   onStart: () => void;
   busy: boolean;
   hasProfile: boolean;
+  t: Messages;
 }) {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-28 pb-16 text-center overflow-hidden">
-      {/* deco circles */}
       <div className="absolute -top-24 -right-24 w-[500px] h-[500px] rounded-full bg-[#534AB7]/10 pointer-events-none" />
       <div className="absolute bottom-0 -left-16 w-[300px] h-[300px] rounded-full bg-[#1D9E75]/10 pointer-events-none" />
       <div className="absolute top-1/3 left-[10%] w-[200px] h-[200px] rounded-full bg-[#EF9F27]/10 pointer-events-none" />
 
       <div className="relative max-w-2xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#AFA9EC] bg-[#EEEDFE] text-[#534AB7] text-sm font-medium px-4 py-1.5 mb-6">
-          👦 아들딸이 직접 설명해드려요
+          {t.hero.badge}
         </div>
 
         <h1
           className="font-display font-bold leading-tight tracking-tight mb-5"
           style={{ fontSize: "clamp(36px, 8vw, 64px)" }}
         >
-          엄마도 이제
+          {t.hero.titleLine1}
           <br />
-          <span style={{ color: PURPLE }}>주식 뉴스</span>가
+          <span style={{ color: PURPLE }}>{t.hero.titleLine2a}</span>
+          {t.hero.titleLine2b}
           <br />
-          <span style={{ color: TEAL }}>쉬워져요</span>
+          <span style={{ color: TEAL }}>{t.hero.titleLine3}</span>
         </h1>
 
-        <p className="text-base sm:text-lg text-gray-500 leading-relaxed max-w-md mx-auto mb-9">
-          어려운 금융 뉴스를 아들, 딸, 며느리, 사위가
-          <br />
-          엄마한테 설명해주듯 바꿔드려요.
-          <br />
-          초등학교 3학년도 이해하는 수준으로요!
+        <p className="text-base sm:text-lg text-gray-500 leading-relaxed max-w-md mx-auto mb-9 whitespace-pre-line">
+          {t.hero.sub}
         </p>
 
         <div className="flex flex-wrap justify-center gap-3 mb-14">
@@ -153,11 +184,11 @@ function Hero({
             className="inline-flex items-center gap-2 rounded-2xl bg-[#FEE500] text-[#3A1D00] font-bold px-7 py-3.5 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-yellow-200 disabled:opacity-50"
           >
             {hasProfile ? (
-              <>내 피드로 가기 →</>
+              <>{t.nav.ctaForLogged}</>
             ) : (
               <>
                 <KakaoIcon />
-                카카오로 시작하기
+                {t.hero.primaryCta}
               </>
             )}
           </button>
@@ -165,47 +196,45 @@ function Hero({
             href="#how"
             className="rounded-2xl border-[1.5px] border-[#7F77DD] text-[#534AB7] font-medium px-7 py-3.5 hover:bg-[#EEEDFE] transition"
           >
-            서비스 둘러보기 ↓
+            {t.hero.secondaryCta}
           </a>
         </div>
 
-        <PhoneMockup />
+        <PhoneMockup t={t} />
       </div>
     </section>
   );
 }
 
-function PhoneMockup() {
+function PhoneMockup({ t }: { t: Messages }) {
   return (
     <div className="mx-auto w-[280px] bg-white rounded-[36px] border-[6px] border-gray-900 overflow-hidden shadow-2xl">
       <div className="w-20 h-5 bg-gray-900 rounded-b-xl mx-auto" />
       <div className="p-3">
         <div className="flex items-center justify-between mb-3">
-          <span className="font-display text-base font-bold">오늘 소식</span>
+          <span className="font-display text-base font-bold">
+            {t.brand.tagline.length > 14 ? t.brand.name1 + t.brand.name2 : t.brand.tagline}
+          </span>
           <span className="text-[10px] rounded-full bg-[#EEEDFE] text-[#534AB7] font-medium px-2 py-0.5">
-            👦 아들 버전
+            👦 {t.speakers.cards[0]?.name}
           </span>
         </div>
         <MockNewsCard
           src="Reuters"
-          time="1시간 전"
-          title="Fed, 기준금리 동결 결정"
-          who="아들이 설명해줄게!"
-          bubble="엄마~ 나라에서 이자 안 올렸대. 주식한텐 좋은 소식이야!"
+          time={t.speakers.cards[0]?.name === "息子" ? "1時間前" : "1시간 전"}
+          title={
+            t.speakers.cards[0]?.name === "息子"
+              ? "Fed、政策金利を据え置きと決定"
+              : "Fed, 기준금리 동결 결정"
+          }
+          who={t.speakers.cards[0]?.sample.slice(1, 30) ?? ""}
+          bubble={t.speakers.cards[0]?.sample.replace(/^"|"$/g, "") ?? ""}
           tone="purple"
           tickers={[
-            { t: "AAPL", p: "+1.2%", up: true },
-            { t: "NVDA", p: "+2.4%", up: true },
+            { tk: "AAPL", p: "+1.2%", up: true },
+            { tk: "NVDA", p: "+2.4%", up: true },
           ]}
-        />
-        <MockNewsCard
-          src="CNBC"
-          time="3시간 전"
-          title="테슬라, 판매 예상 하회"
-          who="아들이 설명해줄게!"
-          bubble="테슬라 차가 예상보다 덜 팔렸대. 잠깐 지켜봐!"
-          tone="amber"
-          tickers={[{ t: "TSLA", p: "-4.1%", up: false }]}
+          name={t.speakers.cards[0]?.name ?? ""}
         />
       </div>
     </div>
@@ -216,18 +245,19 @@ function MockNewsCard({
   src,
   time,
   title,
-  who,
   bubble,
   tone,
   tickers,
+  name,
 }: {
   src: string;
   time: string;
   title: string;
-  who: string;
+  who?: string;
   bubble: string;
   tone: "purple" | "amber";
-  tickers: Array<{ t: string; p: string; up: boolean }>;
+  tickers: Array<{ tk: string; p: string; up: boolean }>;
+  name: string;
 }) {
   const bubbleBg = tone === "purple" ? "bg-[#EEEDFE]" : "bg-[#FFF8EC]";
   const bubbleBorder =
@@ -243,23 +273,17 @@ function MockNewsCard({
         <div className="text-xs font-medium leading-snug">{title}</div>
       </div>
       <div className={`px-3 py-2 border-t ${bubbleBg} ${bubbleBorder}`}>
-        <div className={`text-[10px] font-bold mb-0.5 ${whoColor}`}>
-          👦 {who}
-        </div>
-        <div className="text-[11px] leading-relaxed text-gray-700">
-          {bubble}
-        </div>
+        <div className={`text-[10px] font-bold mb-0.5 ${whoColor}`}>👦 {name}</div>
+        <div className="text-[11px] leading-relaxed text-gray-700">{bubble}</div>
       </div>
       <div className="flex gap-1.5 px-3 py-1.5">
         {tickers.map((t) => (
           <span
-            key={t.t}
+            key={t.tk}
             className="text-[10px] rounded-full border border-stone-200 bg-stone-100 px-2 py-0.5"
           >
-            {t.t}{" "}
-            <span
-              className={t.up ? "text-[#1D9E75]" : "text-[#D85A30]"}
-            >
+            {t.tk}{" "}
+            <span className={t.up ? "text-[#1D9E75]" : "text-[#D85A30]"}>
               {t.p}
             </span>
           </span>
@@ -270,38 +294,19 @@ function MockNewsCard({
 }
 
 // ───────────────────────────────────────────
-// HOW IT WORKS
-// ───────────────────────────────────────────
-function HowItWorks() {
-  const steps = [
-    {
-      n: "1",
-      title: "화자를 선택해요",
-      desc: "아들, 딸, 며느리, 사위 중에 골라요. 엄마 이름도 넣으면 더 따뜻해요.",
-    },
-    {
-      n: "2",
-      title: "오늘 뉴스를 봐요",
-      desc: "어려운 금융 뉴스가 가족 말투 말풍선으로 변환돼요. 용어는 하나도 없어요.",
-    },
-    {
-      n: "3",
-      title: "궁금하면 눌러요",
-      desc: '"어려워요" 또는 "더 알고 싶어요"를 누르면 수준에 맞게 다시 설명해줘요.',
-    },
-  ];
+function HowItWorks({ t }: { t: Messages }) {
   return (
     <section id="how" className="px-6 py-20">
       <div className="max-w-5xl mx-auto bg-white rounded-3xl px-8 sm:px-10 py-14">
         <div className="text-center mb-12">
-          <SectionLabel>어떻게 작동하나요</SectionLabel>
-          <SectionTitle>딱 3단계면 끝이에요</SectionTitle>
+          <SectionLabel>{t.how.label}</SectionLabel>
+          <SectionTitle>{t.how.title}</SectionTitle>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-          {steps.map((s) => (
-            <div key={s.n} className="text-center">
+          {t.how.steps.map((s, i) => (
+            <div key={i} className="text-center">
               <div className="w-12 h-12 rounded-2xl bg-[#EEEDFE] text-[#534AB7] font-display text-xl font-bold flex items-center justify-center mx-auto mb-4">
-                {s.n}
+                {i + 1}
               </div>
               <div className="text-base font-bold mb-2">{s.title}</div>
               <div className="text-sm text-gray-500 leading-relaxed">
@@ -315,45 +320,21 @@ function HowItWorks() {
   );
 }
 
-// ───────────────────────────────────────────
-// SPEAKERS
-// ───────────────────────────────────────────
-function Speakers() {
-  const speakers = [
-    {
-      emoji: "👦",
-      name: "아들",
-      tone: "친근하고 편안하게",
-      sample: '"엄마~ 이게 뭐냐면, 쉽게 말하면 이자가 그대로래. 걱정 마!"',
-    },
-    {
-      emoji: "👧",
-      name: "딸",
-      tone: "다정하고 수다스럽게",
-      sample: '"엄마~! 있잖아, 오늘 진짜 중요한 뉴스 있어. 이거 꼭 알아야 해!"',
-    },
-    {
-      emoji: "👩",
-      name: "며느리",
-      tone: "공손하고 따뜻하게",
-      sample: '"어머니, 제가 쉽게 설명드릴게요. 오늘 좋은 소식이 있었어요!"',
-    },
-    {
-      emoji: "👨",
-      name: "사위",
-      tone: "정중하고 깔끔하게",
-      sample: '"어머니, 말씀드리자면 오늘 시장에 좋은 흐름이 있었습니다."',
-    },
-  ];
+function Speakers({ t }: { t: Messages }) {
   return (
     <section className="max-w-5xl mx-auto px-6 py-20">
-      <SectionLabel>화자 선택</SectionLabel>
-      <SectionTitle>말투가 완전히 달라져요</SectionTitle>
-      <p className="text-base text-gray-500 max-w-xl mb-10">
-        같은 뉴스도 아들이 말하는 것과 며느리가 말하는 게 느낌이 달라야죠.
-      </p>
+      <SectionLabel>{t.speakers.label}</SectionLabel>
+      <SectionTitle>
+        {t.speakers.title.split("\n").map((line, i) => (
+          <span key={i}>
+            {line}
+            {i < t.speakers.title.split("\n").length - 1 && <br />}
+          </span>
+        ))}
+      </SectionTitle>
+      <p className="text-base text-gray-500 max-w-xl mb-10">{t.speakers.sub}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {speakers.map((s) => (
+        {t.speakers.cards.map((s) => (
           <div
             key={s.name}
             className="bg-white border-[1.5px] border-stone-200 rounded-3xl p-6 hover:border-[#7F77DD] hover:-translate-y-1 transition"
@@ -371,59 +352,28 @@ function Speakers() {
   );
 }
 
-// ───────────────────────────────────────────
-// FEATURES
-// ───────────────────────────────────────────
-function Features() {
-  const items = [
-    {
-      icon: "📰",
-      tone: "purple",
-      title: "매일 아침 뉴스 말풍선",
-      desc: "미국 주요 뉴스를 매일 새벽 정리해서 가족 말투로 바꿔드려요. 어려운 용어는 하나도 없어요.",
-    },
-    {
-      icon: "🤔",
-      tone: "teal",
-      title: "왜 싸졌어? 왜 비싸졌어?",
-      desc: "회사 주가가 왜 올랐는지 내렸는지, 관련 뉴스를 연결해서 이유를 설명해드려요.",
-    },
-    {
-      icon: "🛒",
-      tone: "amber",
-      title: "컬리처럼 쉬운 종목 화면",
-      desc: '"지금 저렴해요", "요즘 뜨는 중" 배지로 한눈에 확인. 찜하기도 장바구니처럼 쉬워요.',
-    },
-    {
-      icon: "📚",
-      tone: "coral",
-      title: "단계별 공부방",
-      desc: "회사 조각이 뭔지부터 차근차근. 두올링고처럼 하루 하나씩 배워가요.",
-    },
-  ];
-  const toneColor: Record<string, string> = {
-    purple: "#534AB7",
-    teal: "#1D9E75",
-    amber: "#EF9F27",
-    coral: "#D85A30",
-  };
+function Features({ t }: { t: Messages }) {
+  const tones = ["#534AB7", "#1D9E75", "#EF9F27", "#D85A30"];
   return (
     <section className="max-w-5xl mx-auto px-6 py-20">
-      <SectionLabel>주요 기능</SectionLabel>
+      <SectionLabel>{t.features.label}</SectionLabel>
       <SectionTitle>
-        엄마를 위해 만든
-        <br />
-        모든 것
+        {t.features.title.split("\n").map((line, i) => (
+          <span key={i}>
+            {line}
+            {i < t.features.title.split("\n").length - 1 && <br />}
+          </span>
+        ))}
       </SectionTitle>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-10">
-        {items.map((it) => (
+        {t.features.items.map((it, i) => (
           <div
             key={it.title}
             className="relative bg-white border border-stone-200 rounded-3xl p-7 overflow-hidden"
           >
             <div
               className="absolute top-0 left-0 right-0 h-1"
-              style={{ background: toneColor[it.tone] }}
+              style={{ background: tones[i % tones.length] }}
             />
             <div className="text-3xl mb-3">{it.icon}</div>
             <div className="text-lg font-bold mb-2">{it.title}</div>
@@ -437,75 +387,56 @@ function Features() {
   );
 }
 
-// ───────────────────────────────────────────
-// PRICING
-// ───────────────────────────────────────────
 function Pricing({
   onStart,
-  hasProfile: _hasProfile,
+  t,
 }: {
   onStart: () => void;
-  hasProfile: boolean;
+  t: Messages;
 }) {
   return (
     <section className="max-w-5xl mx-auto px-6 py-20 text-center">
-      <SectionLabel>요금제</SectionLabel>
-      <SectionTitle>부담 없이 시작해요</SectionTitle>
-      <p className="text-base text-gray-500 mb-6">
-        처음엔 무료로 충분히 써보세요.
-      </p>
+      <SectionLabel>{t.pricing.label}</SectionLabel>
+      <SectionTitle>{t.pricing.title}</SectionTitle>
+      <p className="text-base text-gray-500 mb-6">{t.pricing.sub}</p>
       <div className="inline-flex items-center gap-2 rounded-full border border-[#FAC775] bg-[#FFF8EC] text-[#633806] text-sm font-medium px-5 py-2 mb-10">
-        ⚡ 얼리버드 한정 — 나중엔 79,900원으로 올라요
+        {t.pricing.earlyBirdNote}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
         <PricingCard
-          name="무료"
-          price="0"
-          unit="원"
-          desc="일단 써보세요"
-          perks={[
-            "하루 뉴스 5개",
-            "화자 1명 선택",
-            "공부방 2단계",
-            "찜 종목 3개",
-          ]}
-          ctaLabel="무료로 시작"
+          name={t.pricing.free.name}
+          price={t.pricing.free.price}
+          unit={t.pricing.free.unit}
+          desc={t.pricing.free.desc}
+          perks={t.pricing.free.perks}
+          ctaLabel={t.pricing.free.cta}
           ctaStyle="outline"
           onCtaClick={onStart}
         />
         <PricingCard
-          name="월 구독"
-          price="4,900"
-          unit="원/월"
-          desc="커피 한 잔 값으로"
-          perks={[
-            "뉴스 무제한",
-            "화자 전체 선택",
-            "공부방 전체 오픈",
-            "찜 종목 무제한",
-            "더 알고싶어요 무제한",
-          ]}
+          name={t.pricing.monthly.name}
+          price={t.pricing.monthly.price}
+          unit={t.pricing.monthly.unit}
+          desc={t.pricing.monthly.desc}
+          perks={t.pricing.monthly.perks}
           featured
-          ctaLabel="구독 시작하기"
+          featuredBadge={t.pricing.monthly.badge}
+          ctaLabel={t.pricing.monthly.cta}
           ctaStyle="filled"
           onCtaClick={onStart}
         />
         <PricingCard
-          name="평생 이용권"
-          price="49,900"
-          unit="원"
-          originalPrice="79,900원"
-          desc="한 번만 내고 평생 써요"
-          perks={[
-            "구독 혜택 전부 포함",
-            "추후 기능도 무료",
-            "월 구독 대비 50% 절약",
-            "얼리버드 전용 배지",
-          ]}
+          name={t.pricing.lifetime.name}
+          price={t.pricing.lifetime.price}
+          unit={t.pricing.lifetime.unit}
+          originalPrice={t.pricing.lifetime.originalPrice}
+          desc={t.pricing.lifetime.desc}
+          perks={t.pricing.lifetime.perks}
           earlyBird
-          ctaLabel="얼리버드로 시작하기"
+          earlyBirdBadge={t.pricing.lifetime.badge}
+          ctaLabel={t.pricing.lifetime.cta}
           ctaStyle="amber"
-          ctaSubtext="🔥 선착순 100명 한정"
+          ctaSubtext={t.pricing.lifetime.ctaSub}
           onCtaClick={onStart}
         />
       </div>
@@ -524,7 +455,9 @@ function PricingCard({
   ctaStyle,
   ctaSubtext,
   featured,
+  featuredBadge,
   earlyBird,
+  earlyBirdBadge,
   onCtaClick,
 }: {
   name: string;
@@ -537,7 +470,9 @@ function PricingCard({
   ctaStyle: "outline" | "filled" | "amber";
   ctaSubtext?: string;
   featured?: boolean;
+  featuredBadge?: string;
   earlyBird?: boolean;
+  earlyBirdBadge?: string;
   onCtaClick: () => void;
 }) {
   const borderClass = featured
@@ -549,23 +484,31 @@ function PricingCard({
     <div
       className={`relative bg-white rounded-3xl px-7 py-8 text-left ${borderClass}`}
     >
-      {featured && (
+      {featured && featuredBadge && (
         <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#534AB7] text-white text-xs font-medium px-4 py-1 whitespace-nowrap">
-          가장 인기
+          {featuredBadge}
         </span>
       )}
-      {earlyBird && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full text-white text-xs font-medium px-4 py-1 whitespace-nowrap" style={{ background: "linear-gradient(135deg, #EF9F27, #D85A30)" }}>
-          ⚡ 얼리버드
+      {earlyBird && earlyBirdBadge && (
+        <span
+          className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full text-white text-xs font-medium px-4 py-1 whitespace-nowrap"
+          style={{ background: "linear-gradient(135deg, #EF9F27, #D85A30)" }}
+        >
+          {earlyBirdBadge}
         </span>
       )}
       <div className="text-sm text-gray-500 mb-1">{name}</div>
-      <div className="font-display text-4xl font-bold mb-1" style={earlyBird ? { color: "#854F0B" } : undefined}>
+      <div
+        className="font-display text-4xl font-bold mb-1"
+        style={earlyBird ? { color: "#854F0B" } : undefined}
+      >
         {price}
         <span className="text-base font-normal text-gray-500">{unit}</span>
       </div>
       {originalPrice && (
-        <div className="text-xs text-gray-400 line-through mb-1">정가 {originalPrice}</div>
+        <div className="text-xs text-gray-400 line-through mb-1">
+          {originalPrice}
+        </div>
       )}
       <div className="text-sm text-gray-500 mb-5">{desc}</div>
       <ul className="flex flex-col gap-2.5 mb-6">
@@ -600,36 +543,30 @@ function PricingCard({
   );
 }
 
-// ───────────────────────────────────────────
-// REFERRAL
-// ───────────────────────────────────────────
-function Referral() {
+function Referral({ t }: { t: Messages }) {
   return (
     <section className="max-w-5xl mx-auto px-6 py-20 text-center">
-      <SectionLabel>친구 초대</SectionLabel>
+      <SectionLabel>{t.referral.label}</SectionLabel>
       <SectionTitle>
-        3명만 초대하면
-        <br />
-        1개월 무료예요
+        {t.referral.title.split("\n").map((line, i) => (
+          <span key={i}>
+            {line}
+            {i < t.referral.title.split("\n").length - 1 && <br />}
+          </span>
+        ))}
       </SectionTitle>
-      <p className="text-base text-gray-500 mb-12">
-        초대한 사람도, 초대받은 사람도 둘 다 혜택이 있어요.
-      </p>
+      <p className="text-base text-gray-500 mb-12">{t.referral.sub}</p>
       <div className="flex flex-wrap justify-center gap-4 mb-10">
         <div className="bg-white border-[1.5px] border-[#7F77DD] rounded-3xl p-7 w-64 text-center">
           <div className="text-4xl mb-3">👆</div>
-          <div className="text-sm font-bold text-[#3C3489] mb-2">초대한 나</div>
-          <div className="text-xs text-gray-500 leading-relaxed mb-3">
-            친구 3명이 가입하면
-            <br />
-            구독 1개월 무료!
+          <div className="text-sm font-bold text-[#3C3489] mb-2">
+            {t.referral.inviterTitle}
           </div>
-          <div className="bg-[#EEEDFE] text-[#534AB7] rounded-xl px-3 py-2.5 text-xs font-medium leading-relaxed">
-            3명 → +1개월 무료
-            <br />
-            6명 → +2개월 무료
-            <br />
-            계속 쌓여요 ♾️
+          <div className="text-xs text-gray-500 leading-relaxed mb-3 whitespace-pre-line">
+            {t.referral.inviterDesc}
+          </div>
+          <div className="bg-[#EEEDFE] text-[#534AB7] rounded-xl px-3 py-2.5 text-xs font-medium leading-relaxed whitespace-pre-line">
+            {t.referral.inviterReward}
           </div>
         </div>
         <div className="hidden sm:flex items-center text-2xl text-gray-400">
@@ -637,15 +574,14 @@ function Referral() {
         </div>
         <div className="bg-white border-[1.5px] border-[#1D9E75] rounded-3xl p-7 w-64 text-center">
           <div className="text-4xl mb-3">🎁</div>
-          <div className="text-sm font-bold text-[#085041] mb-2">초대받은 친구</div>
-          <div className="text-xs text-gray-500 leading-relaxed mb-3">
-            초대 링크로 가입하면
-            <br />첫 달 50% 할인!
+          <div className="text-sm font-bold text-[#085041] mb-2">
+            {t.referral.inviteeTitle}
           </div>
-          <div className="bg-[#E1F5EE] text-[#085041] rounded-xl px-3 py-2.5 text-xs font-medium">
-            첫 달 4,900원 →
-            <br />
-            <span className="text-base font-bold">2,450원</span>
+          <div className="text-xs text-gray-500 leading-relaxed mb-3 whitespace-pre-line">
+            {t.referral.inviteeDesc}
+          </div>
+          <div className="bg-[#E1F5EE] text-[#085041] rounded-xl px-3 py-2.5 text-xs font-medium whitespace-pre-line">
+            {t.referral.inviteeReward}
           </div>
         </div>
       </div>
@@ -653,17 +589,16 @@ function Referral() {
   );
 }
 
-// ───────────────────────────────────────────
-// FINAL CTA
-// ───────────────────────────────────────────
 function FinalCta({
   onStart,
   busy,
   hasProfile,
+  t,
 }: {
   onStart: () => void;
   busy: boolean;
   hasProfile: boolean;
+  t: Messages;
 }) {
   return (
     <div className="px-6 pb-20">
@@ -675,15 +610,11 @@ function FinalCta({
           className="absolute -top-24 -right-24 w-[400px] h-[400px] rounded-full pointer-events-none"
           style={{ background: "rgba(255,255,255,0.05)" }}
         />
-        <h2 className="font-display font-bold text-white text-3xl sm:text-4xl mb-4 leading-tight">
-          엄마한테 지금
-          <br />
-          보내드리세요 💜
+        <h2 className="font-display font-bold text-white text-3xl sm:text-4xl mb-4 leading-tight whitespace-pre-line">
+          {t.finalCta.title}
         </h2>
-        <p className="text-white/75 text-base mb-8 leading-relaxed">
-          어려운 주식, 이제 아들딸이 설명해드려요.
-          <br />
-          엄마도 할 수 있어요.
+        <p className="text-white/75 text-base mb-8 leading-relaxed whitespace-pre-line">
+          {t.finalCta.sub}
         </p>
         <button
           onClick={onStart}
@@ -691,11 +622,11 @@ function FinalCta({
           className="inline-flex items-center gap-2 rounded-2xl bg-[#FEE500] text-[#3A1D00] font-bold px-8 py-4 hover:-translate-y-0.5 transition disabled:opacity-50"
         >
           {hasProfile ? (
-            <>내 피드로 가기 →</>
+            <>{t.nav.ctaForLogged}</>
           ) : (
             <>
               <KakaoIcon size={20} />
-              {busy ? "이동 중..." : "카카오로 시작하기"}
+              {busy ? "..." : t.finalCta.button}
             </>
           )}
         </button>
@@ -704,23 +635,18 @@ function FinalCta({
   );
 }
 
-// ───────────────────────────────────────────
-// FOOTER
-// ───────────────────────────────────────────
-function Footer() {
+function Footer({ t }: { t: Messages }) {
   return (
     <footer className="text-center py-8 px-6 border-t border-stone-200 text-sm text-gray-500">
       <div className="font-display font-bold text-[#534AB7] text-base mb-2">
-        엄니머니
+        {t.brand.name1}
+        {t.brand.name2}
       </div>
-      <p>© 2026 엄니머니. 엄마의 첫 번째 머니 앱.</p>
+      <p>{t.footer.line}</p>
     </footer>
   );
 }
 
-// ───────────────────────────────────────────
-// shared bits
-// ───────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-xs sm:text-sm font-medium tracking-widest text-[#534AB7] uppercase mb-3">
