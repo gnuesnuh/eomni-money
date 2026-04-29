@@ -1,3 +1,17 @@
+import { join } from "node:path";
+import * as dotenv from "dotenv";
+
+// 셸에 이미 export된 빈 env var가 있으면 dotenv는 기본적으로 덮어쓰지 않음.
+// 우리는 .env 가 우선이라 override:true로 먼저 로드한다.
+dotenv.config({
+  path: join(__dirname, "..", ".env"),
+  override: true,
+});
+dotenv.config({
+  path: join(__dirname, "..", ".env.local"),
+  override: true,
+});
+
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";

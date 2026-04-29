@@ -5,6 +5,8 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { HealthController } from "./health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
 import { FinnhubModule } from "./integrations/finnhub/finnhub.module";
+import { ClaudeModule } from "./integrations/claude/claude.module";
+import { DevModule } from "./dev/dev.module";
 import { NewsModule } from "./news/news.module";
 import { StocksModule } from "./stocks/stocks.module";
 import { UsersModule } from "./users/users.module";
@@ -24,6 +26,8 @@ import { BatchModule } from "./batch/batch.module";
     ScheduleModule.forRoot(),
     PrismaModule,
     FinnhubModule,
+    ClaudeModule,
+    DevModule,
     NewsModule,
     StocksModule,
     UsersModule,
