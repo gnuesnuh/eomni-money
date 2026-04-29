@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { ExplainMoreMode, NewsCardData } from "@eomni/shared";
 import { BubbleArea } from "./BubbleArea";
@@ -239,17 +240,19 @@ export function NewsCard({ news }: NewsCardProps) {
       {news.tickers.length > 0 && (
         <footer className="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3">
           {news.tickers.map((t) => (
-            <span
+            <Link
               key={t.ticker}
-              className={`text-sm font-semibold rounded-full px-3 py-1 ${
+              href={`/stocks/${t.ticker}`}
+              className={`text-sm font-semibold rounded-full px-3 py-1 transition active:scale-[0.97] hover:opacity-80 ${
                 t.changePct >= 0
                   ? "bg-red-50 text-red-600"
                   : "bg-blue-50 text-blue-600"
               }`}
             >
               {t.ticker} {t.changePct >= 0 ? "+" : ""}
-              {t.changePct.toFixed(1)}%
-            </span>
+              {t.changePct.toFixed(1)}%{" "}
+              <span className="opacity-60">›</span>
+            </Link>
           ))}
         </footer>
       )}
