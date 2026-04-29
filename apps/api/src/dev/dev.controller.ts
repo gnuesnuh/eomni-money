@@ -11,6 +11,7 @@ import { IsIn, IsOptional, IsString, MinLength } from "class-validator";
 import type { LearningLevel, SpeakerType } from "@eomni/shared";
 import { ClaudeService } from "../integrations/claude/claude.service";
 import { FinnhubService } from "../integrations/finnhub/finnhub.service";
+import { NewsService } from "../news/news.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 class BubbleDto {
@@ -59,7 +60,21 @@ export class DevController {
     private readonly claude: ClaudeService,
     private readonly finnhub: FinnhubService,
     private readonly prisma: PrismaService,
+    private readonly news: NewsService,
   ) {}
+
+  // (speakerType, level) 조합으로 변환된 말풍선이 없는 기존 뉴스를 일괄 변환
+  // 사용 예: POST /api/dev/expand-bubbles?speaker=son_in_law&level=advanced
+  @Post("expand-bubbles")
+  async expand(
+    @Query("speaker") speakerType: SpeakerType,
+    @Query("level") level: LearningLevel,
+  ) {
+    if (!speakerType || !level) {
+      return { error: "speaker and level query params required" };
+    }
+    return this.news.expandForCombo(speakerType, level);
+  }
 
   // 직접 입력으로 말풍선 생성 (Finnhub/DB 없이)
   @Post("bubble")

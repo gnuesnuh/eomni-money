@@ -7,8 +7,12 @@ export class NewsController {
   constructor(private readonly news: NewsService) {}
 
   @Get()
-  list(@Query("filter") filter?: string) {
-    return this.news.findFeed(filter);
+  list(
+    @Query("speaker") speakerType?: string,
+    @Query("level") level?: string,
+    @Query("filter") filter?: string,
+  ) {
+    return this.news.findFeed({ speakerType, level, filter });
   }
 
   @Get(":id")
