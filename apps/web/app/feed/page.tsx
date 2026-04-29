@@ -4,8 +4,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { NewsCardData } from "@eomni/shared";
 import { NewsCard } from "@/components/news/NewsCard";
+import { NativeAdCard } from "@/components/news/NativeAdCard";
+import { FreeLimitCard } from "@/components/news/FreeLimitCard";
 import { PersonaHeader } from "@/components/PersonaHeader";
+import { TabBar } from "@/components/TabBar";
 import { useProfile } from "@/lib/profile";
+import { pickAd } from "@/lib/ads";
+import { useSubscription } from "@/lib/subscription";
 
 interface FeedResponse {
   items: NewsCardData[];
@@ -14,8 +19,11 @@ interface FeedResponse {
   fallback: boolean;
 }
 
+const AD_INTERVAL = 3; // 매 3개 뉴스마다 광고 1개
+
 export default function FeedPage() {
-  const { profile, loaded } = useProfile();
+  const { profile, loaded: profileLoaded } = useProfile();
+  const sub = useSubscription();
   const [feed, setFeed] = useState<FeedResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,10 +49,20 @@ export default function FeedPage() {
   }, [profile]);
 
   useEffect(() => {
-    if (loaded && profile) fetchFeed();
-  }, [loaded, profile, fetchFeed]);
+    if (profileLoaded && profile) fetchFeed();
+  }, [profileLoaded, profile, fetchFeed]);
 
-  if (!loaded) {
+  // 화면에 노출된 뉴스 개수를 일일 카운트로 기록 (자정 자동 리셋)
+  useEffect(() => {
+    if (!feed || !sub.loaded) return;
+    if (sub.isSubscribed) return;
+    const visible = Math.min(feed.items.length, sub.freeLimit);
+    sub.recordViews(visible);
+    // recordViews는 useCallback 안정 — eslint exhaustive 무시
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feed, sub.loaded, sub.isSubscribed, sub.freeLimit]);
+
+  if (!profileLoaded) {
     return <div className="p-8 text-center text-gray-400">불러오는 중...</div>;
   }
 
@@ -64,15 +82,28 @@ export default function FeedPage() {
     );
   }
 
+  // 무료 사용자: 5개로 제한, 그 다음에 한도 카드
+  const visibleItems = feed
+    ? sub.isSubscribed
+      ? feed.items
+      : feed.items.slice(0, sub.freeLimit)
+    : [];
+  const hiddenCount = feed
+    ? Math.max(0, feed.items.length - visibleItems.length)
+    : 0;
+  const showLimitCard =
+    feed != null && !sub.isSubscribed && visibleItems.length >= sub.freeLimit;
+
   return (
     <>
       <PersonaHeader profile={profile} onRegenerated={fetchFeed} />
-      <main className="px-4 py-6">
-        <header className="mb-4">
+      <TabBar />
+      <main className="px-4 py-5">
+        <header className="mb-3">
           <h1 className="text-2xl font-bold">오늘의 뉴스</h1>
           {feed?.fallback && (
             <p className="text-xs text-amber-600 mt-1 bg-amber-50 rounded-md px-2 py-1">
-              아직 이 화자/수준으로는 변환이 안 되어 기본(아들·완전처음)으로
+              아직 이 화자/수준으로 변환된 뉴스가 없어 기본(아들·완전처음)으로
               보여드려요. 위 “내 스타일로 다시 변환” 누르면 바꿔드립니다.
             </p>
           )}
@@ -102,14 +133,49 @@ export default function FeedPage() {
           </div>
         )}
 
-        {feed && feed.items.length > 0 && (
+        {feed && visibleItems.length > 0 && (
           <div className="flex flex-col gap-4">
-            {feed.items.map((n) => (
-              <NewsCard key={n.id} news={n} />
+            {visibleItems.map((n, idx) => (
+              <NewsItemWithAd
+                key={n.id}
+                news={n}
+                index={idx}
+                hideAds={sub.isSubscribed}
+              />
             ))}
+            {showLimitCard && (
+              <FreeLimitCard
+                shownCount={visibleItems.length}
+                freeLimit={sub.freeLimit}
+              />
+            )}
+            {sub.isSubscribed && hiddenCount > 0 && (
+              // 구독자는 모든 항목 노출 — 이 분기에 도달할 일 없음, 안전 가드
+              <div className="text-xs text-gray-400 text-center">
+                +{hiddenCount}개 더 (구독 중)
+              </div>
+            )}
           </div>
         )}
       </main>
+    </>
+  );
+}
+
+function NewsItemWithAd({
+  news,
+  index,
+  hideAds,
+}: {
+  news: NewsCardData;
+  index: number;
+  hideAds: boolean;
+}) {
+  const showAdAfter = !hideAds && (index + 1) % AD_INTERVAL === 0;
+  return (
+    <>
+      <NewsCard news={news} />
+      {showAdAfter && <NativeAdCard ad={pickAd(Math.floor(index / AD_INTERVAL))} />}
     </>
   );
 }

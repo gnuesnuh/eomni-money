@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { clearProfile, useProfile } from "@/lib/profile";
 import { SPEAKER_LABELS, TARGET_LABELS, LEVEL_LABELS } from "@eomni/shared";
 import { PersonaHeader } from "@/components/PersonaHeader";
+import { useSubscription } from "@/lib/subscription";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { profile, loaded } = useProfile();
+  const sub = useSubscription();
 
   if (!loaded) return <div className="p-8 text-gray-400">불러오는 중...</div>;
 
@@ -31,6 +33,40 @@ export default function SettingsPage() {
         ) : (
           <p className="text-gray-500">아직 설정 안 되어 있어요</p>
         )}
+
+        {/* 구독 상태 (MVP: 결제 미연동, 토글로 시뮬레이션) */}
+        <section className="rounded-2xl border border-gray-200 p-4 mb-4">
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-sm text-gray-500">구독 상태</div>
+            <span
+              className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
+                sub.isSubscribed
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {sub.isSubscribed ? "구독 중" : "무료"}
+            </span>
+          </div>
+          <div className="text-base font-semibold">
+            {sub.isSubscribed ? "월 4,900원 무제한" : `오늘 본 뉴스 ${sub.viewCount}/${sub.freeLimit}개`}
+          </div>
+          <div className="mt-3">
+            <button
+              onClick={() => sub.setSubscribed(!sub.isSubscribed)}
+              className={`text-sm rounded-full px-4 py-2 ${
+                sub.isSubscribed
+                  ? "border border-gray-300 text-gray-700"
+                  : "bg-orange-500 text-white"
+              }`}
+            >
+              {sub.isSubscribed ? "구독 해지 (시뮬레이션)" : "구독하기 (시뮬레이션)"}
+            </button>
+            <p className="text-xs text-gray-400 mt-2">
+              MVP 테스트용 — 실제 결제는 Phase 2 (포트원) 연동 후
+            </p>
+          </div>
+        </section>
 
         <button
           onClick={() => router.push("/onboarding")}
