@@ -1,17 +1,23 @@
 node_modules
 **/node_modules
 **/dist
-**/.next
 **/.turbo
 .git
 .env
 .env.local
 .env.*.local
-apps/web
-README.md
-DEPLOY.md
 *.log
 .DS_Store
 .vscode
 .idea
 *.tsbuildinfo
+
+# apps/web 은 API 빌드에 불필요하지만, npm workspaces 가 root install 시
+# 모든 workspace 의 package.json 을 요구하므로 그 파일만 예외로 둠.
+apps/web
+!apps/web/package.json
+apps/web/.next
+apps/web/node_modules
+
+README.md
+DEPLOY.md
