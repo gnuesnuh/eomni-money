@@ -8,7 +8,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-pretendard)", "system-ui", "sans-serif"],
+        sans: ["var(--font-noto-kr)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-noto-kr)", "system-ui", "sans-serif"],
       },
       fontSize: {
         // 시니어 가독성: 기본 18px 부터
