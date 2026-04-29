@@ -8,6 +8,9 @@ import {
   type StockBadge,
 } from "@eomni/shared";
 import { CompactNewsItem, type WhyKind } from "@/components/news/CompactNewsItem";
+import { CompanyIntroChat } from "@/components/stocks/CompanyIntroChat";
+import { MoodBar } from "@/components/stocks/MoodBar";
+import { getStockIntro, mockMood } from "@/lib/stockIntros";
 import { useProfile } from "@/lib/profile";
 
 interface StockDetail {
@@ -153,6 +156,16 @@ export default function StockDetailPage() {
             <div className="text-xs text-gray-500">{stock.descriptionKo}</div>
           )}
         </div>
+        <button
+          onClick={() => {
+            // TODO: 인증 붙으면 watchlist API. 지금은 토스트 정도.
+            alert("찜하기는 준비 중이에요!");
+          }}
+          className="text-2xl text-red-500 leading-none w-10 h-10 flex items-center justify-center"
+          aria-label="찜하기"
+        >
+          ♡
+        </button>
       </header>
 
       {error && (
@@ -194,36 +207,35 @@ export default function StockDetailPage() {
                 </span>
               )}
             </div>
+          </section>
 
-            {/* Why buttons */}
-            <div className="grid grid-cols-2 gap-2 mt-3">
+          {/* 회사 소개 카톡 Q&A */}
+          {(() => {
+            const intro = getStockIntro(stock.ticker);
+            return intro ? <CompanyIntroChat intro={intro} /> : null;
+          })()}
+
+          {/* Mood bar + Why 버튼 (카카오 노랑톤, chat 배경 연결) */}
+          <section className="bg-[#B2C7D9] px-3 pb-3 pt-0">
+            <MoodBar
+              {...mockMood(stock.changePct, newsResp?.count ?? 0)}
+            />
+            <div className="flex gap-1.5 mt-2">
               {whyOpts.map((opt) => {
                 const active = activeWhy === opt.kind;
-                const activeStyle = {
-                  cheap: "bg-red-50 border-red-300",
-                  exp: "bg-purple-50 border-purple-300",
-                  hot: "bg-orange-50 border-orange-300",
-                  now: "bg-amber-50 border-amber-300",
-                }[opt.kind];
                 return (
                   <button
                     key={opt.kind}
                     onClick={() =>
                       setActiveWhy(activeWhy === opt.kind ? null : opt.kind)
                     }
-                    className={`rounded-xl border px-3 py-2.5 text-center transition active:scale-[0.98] ${
+                    className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-bold transition active:scale-[0.98] ${
                       active
-                        ? activeStyle
-                        : "bg-white border-gray-200 hover:border-gray-300"
+                        ? "bg-[#3A1D00] text-[#FEE500]"
+                        : "bg-[#FEE500] text-[#3A1D00]"
                     }`}
                   >
-                    <div className="text-lg mb-0.5">{opt.icon}</div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {opt.label}
-                    </div>
-                    <div className="text-[10px] text-gray-500 mt-0.5">
-                      {opt.sub}
-                    </div>
+                    {opt.icon} {opt.label}
                   </button>
                 );
               })}
