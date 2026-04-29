@@ -1,4 +1,8 @@
+"use client";
+
+import { useId } from "react";
 import type { SpeakerType } from "@eomni/shared";
+import { useSpeak } from "@/lib/speak";
 
 const SPEAKER_EMOJI: Record<SpeakerType, string> = {
   son: "👦",
@@ -59,6 +63,9 @@ export function BubbleArea({
   text,
   variant = "initial",
 }: BubbleAreaProps) {
+  const ownerId = useId();
+  const { speak, stop, speaking, supported } = useSpeak(ownerId);
+
   const intro =
     variant === "simpler"
       ? SIMPLER_INTRO[speakerType]
@@ -73,6 +80,20 @@ export function BubbleArea({
       >
         <span className="text-xl">{SPEAKER_EMOJI[speakerType]}</span>
         <span>{intro}</span>
+        {supported && (
+          <button
+            onClick={() => (speaking ? stop() : speak(text, speakerType))}
+            className={`ml-auto rounded-full w-9 h-9 flex items-center justify-center transition active:scale-95 ${
+              speaking
+                ? "bg-white/90 ring-2 ring-orange-400"
+                : "bg-white/60 hover:bg-white"
+            }`}
+            aria-label={speaking ? "읽기 중지" : "음성으로 읽기"}
+            title={speaking ? "읽기 중지" : "음성으로 읽기"}
+          >
+            <span className="text-lg">{speaking ? "⏸" : "🔊"}</span>
+          </button>
+        )}
       </div>
       <p className="text-lg leading-relaxed text-gray-900 whitespace-pre-line">
         {text}

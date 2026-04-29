@@ -117,6 +117,8 @@ model NewsBubble {
   speakerType SpeakerType   @map("speaker_type")
   level       LearningLevel
   mode        ExplainMode   @default(initial)
+  audioBytes  Bytes?        @map("audio_bytes")
+  audioVoice  String?       @map("audio_voice")
   publishedAt DateTime?     @map("published_at")
   createdAt   DateTime      @default(now()) @map("created_at")
 
