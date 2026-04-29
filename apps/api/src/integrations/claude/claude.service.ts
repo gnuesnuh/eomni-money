@@ -34,6 +34,37 @@ export interface BubbleResponse {
   };
 }
 
+export interface TranslationResponse {
+  headlineKo: string;
+  summaryKo: string;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+  };
+}
+
+const TRANSLATION_SYSTEM = `당신은 영문 금융 뉴스를 한국어로 번역하는 전문 번역가입니다.
+
+규칙:
+- 헤드라인: 자연스러운 한국어 뉴스 제목 스타일 (50자 이내)
+- 요약: 1~2문장, 핵심만 (200자 이내)
+- 미국 회사명/종목은 한국 통용 표기: Apple → 애플, NVIDIA → 엔비디아, Tesla → 테슬라, Microsoft → 마이크로소프트, Amazon → 아마존, Federal Reserve / Fed → 연준
+- 회사명은 한국어 표기 + (영문) 병기 가능
+- 직역 금지, 의역 권장
+- 매매 추천성 표현(추천/매수/매도) 금지
+
+JSON 객체로만 응답: { "headlineKo": "...", "summaryKo": "..." }`;
+
+const TRANSLATION_SCHEMA = {
+  type: "object" as const,
+  properties: {
+    headlineKo: { type: "string" as const },
+    summaryKo: { type: "string" as const },
+  },
+  required: ["headlineKo", "summaryKo"],
+  additionalProperties: false,
+};
+
 @Injectable()
 export class ClaudeService {
   private readonly logger = new Logger(ClaudeService.name);
@@ -98,6 +129,61 @@ export class ClaudeService {
         outputTokens: message.usage.output_tokens,
         cacheReadInputTokens: message.usage.cache_read_input_tokens ?? 0,
         cacheCreationInputTokens: message.usage.cache_creation_input_tokens ?? 0,
+      },
+    };
+  }
+
+  // 영문 헤드라인/요약 → 자연스러운 한국어 (구조화 JSON 응답)
+  async translateNews(input: {
+    headlineEn: string;
+    summaryEn: string;
+  }): Promise<TranslationResponse> {
+    const client = this.getClient();
+    const model =
+      this.config.get<string>("ANTHROPIC_MODEL") ?? DEFAULT_MODEL;
+
+    const message = await client.messages.create({
+      model,
+      max_tokens: 600,
+      system: TRANSLATION_SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: `헤드라인: ${input.headlineEn}\n요약: ${input.summaryEn || "(요약 없음)"}`,
+        },
+      ],
+      output_config: {
+        format: { type: "json_schema", schema: TRANSLATION_SCHEMA },
+      },
+      thinking: { type: "disabled" },
+    });
+
+    const text = message.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+
+    let parsed: { headlineKo?: unknown; summaryKo?: unknown };
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      this.logger.error(`translateNews: bad JSON: ${text.slice(0, 200)}`);
+      throw new Error("Translation returned invalid JSON");
+    }
+
+    if (
+      typeof parsed.headlineKo !== "string" ||
+      typeof parsed.summaryKo !== "string"
+    ) {
+      throw new Error("Translation missing required fields");
+    }
+
+    return {
+      headlineKo: parsed.headlineKo,
+      summaryKo: parsed.summaryKo,
+      usage: {
+        inputTokens: message.usage.input_tokens,
+        outputTokens: message.usage.output_tokens,
       },
     };
   }

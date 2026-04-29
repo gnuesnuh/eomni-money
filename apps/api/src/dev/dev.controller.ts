@@ -76,6 +76,70 @@ export class DevController {
     return this.news.expandForCombo(speakerType, level);
   }
 
+  // 한국어 번역(headlineKo, summaryKo)이 빠진 initial 말풍선들에 채워넣기
+  // 같은 (stockId, headlineEn) 은 같은 번역을 공유 → Claude 호출 1회로 다 채움
+  @Post("backfill-translations")
+  async backfillTranslations() {
+    const initialMissing = await this.prisma.newsBubble.findMany({
+      where: { mode: "initial", headlineKo: null },
+      select: {
+        id: true,
+        stockId: true,
+        headlineEn: true,
+        summaryEn: true,
+      },
+    });
+
+    // (stockId, headlineEn) 유니크 묶음 → 1회 번역으로 모든 row 갱신
+    const grouped = new Map<
+      string,
+      { ids: string[]; headlineEn: string; summaryEn: string }
+    >();
+    for (const row of initialMissing) {
+      const key = `${row.stockId ?? "_"}::${row.headlineEn}`;
+      const cur = grouped.get(key);
+      if (cur) cur.ids.push(row.id);
+      else
+        grouped.set(key, {
+          ids: [row.id],
+          headlineEn: row.headlineEn,
+          summaryEn: row.summaryEn,
+        });
+    }
+
+    let translated = 0;
+    let updated = 0;
+    const usage = { input: 0, output: 0 };
+
+    for (const g of grouped.values()) {
+      try {
+        const tr = await this.claude.translateNews({
+          headlineEn: g.headlineEn,
+          summaryEn: g.summaryEn,
+        });
+        const r = await this.prisma.newsBubble.updateMany({
+          where: { id: { in: g.ids } },
+          data: { headlineKo: tr.headlineKo, summaryKo: tr.summaryKo },
+        });
+        translated++;
+        updated += r.count;
+        usage.input += tr.usage.inputTokens;
+        usage.output += tr.usage.outputTokens;
+      } catch (err) {
+        this.logger.error(
+          `[backfill-translations] failed for "${g.headlineEn.slice(0, 60)}": ${(err as Error).message}`,
+        );
+      }
+    }
+
+    return {
+      uniqueHeadlines: grouped.size,
+      translated,
+      rowsUpdated: updated,
+      usage,
+    };
+  }
+
   // 직접 입력으로 말풍선 생성 (Finnhub/DB 없이)
   @Post("bubble")
   async makeBubble(@Body() dto: BubbleDto) {
@@ -177,6 +241,15 @@ export class DevController {
           if (headlinesSeenThisRun.has(n.headline)) continue;
           headlinesSeenThisRun.add(n.headline);
 
+          const summaryEn = n.summary?.slice(0, 2000) ?? "";
+
+          // 1) 한국어 번역 (헤드라인 + 요약)
+          const tr = await this.claude.translateNews({
+            headlineEn: n.headline,
+            summaryEn,
+          });
+
+          // 2) 가족 말투 말풍선
           const result = await this.claude.generateBubble({
             speakerType,
             level,
@@ -191,7 +264,9 @@ export class DevController {
               stockId: stock.id,
               source: n.source,
               headlineEn: n.headline,
-              summaryEn: n.summary?.slice(0, 2000) ?? "",
+              summaryEn,
+              headlineKo: tr.headlineKo,
+              summaryKo: tr.summaryKo,
               bubbleKo: result.bubble,
               speakerType,
               level,
@@ -201,8 +276,8 @@ export class DevController {
           });
           created++;
           totalBubbles++;
-          totalUsage.input += result.usage.inputTokens;
-          totalUsage.output += result.usage.outputTokens;
+          totalUsage.input += result.usage.inputTokens + tr.usage.inputTokens;
+          totalUsage.output += result.usage.outputTokens + tr.usage.outputTokens;
         }
 
         summary.push({ ticker: t, bubblesCreated: created, currentPrice });

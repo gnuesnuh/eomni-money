@@ -111,6 +111,8 @@ model NewsBubble {
   source      String
   headlineEn  String        @map("headline_en")
   summaryEn   String        @map("summary_en") @db.Text
+  headlineKo  String?       @map("headline_ko")
+  summaryKo   String?       @map("summary_ko") @db.Text
   bubbleKo    String        @map("bubble_ko") @db.Text
   speakerType SpeakerType   @map("speaker_type")
   level       LearningLevel

@@ -59,10 +59,15 @@ export class NewsService {
       items: bubbles.map((b) => ({
         id: b.id,
         source: b.source,
-        headline: b.headlineEn,
+        headline: b.headlineKo ?? b.headlineEn, // 호환용 — 클라이언트 점진 마이그레이션
+        headlineKo: b.headlineKo,
+        headlineEn: b.headlineEn,
+        summaryKo: b.summaryKo,
+        summaryEn: b.summaryEn,
         bubble: b.bubbleKo,
         speakerType: b.speakerType,
         publishedAt: relativeTimeKo(b.publishedAt ?? b.createdAt),
+        publishedAtIso: (b.publishedAt ?? b.createdAt).toISOString(),
         tickers: b.stock
           ? [{ ticker: b.stock.ticker, changePct: b.stock.changePct ?? 0 }]
           : [],

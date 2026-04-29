@@ -4,6 +4,27 @@ import { useState } from "react";
 import type { ExplainMoreMode, NewsCardData } from "@eomni/shared";
 import { BubbleArea } from "./BubbleArea";
 
+type Lang = "ko" | "en";
+
+const TIME_FMT = new Intl.DateTimeFormat("ko-KR", {
+  month: "long",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Seoul",
+});
+
+function formatAbsoluteTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return TIME_FMT.format(d);
+  } catch {
+    return "";
+  }
+}
+
 interface NewsCardProps {
   news: NewsCardData;
 }
@@ -23,6 +44,17 @@ type DoneState =
 export function NewsCard({ news }: NewsCardProps) {
   const [state, setState] = useState<ExplainState>({ kind: "idle" });
   const [done, setDone] = useState<DoneState>(null);
+  const [lang, setLang] = useState<Lang>("ko");
+
+  const hasKo = !!news.headlineKo;
+  const showingKo = lang === "ko" && hasKo;
+  const headline = showingKo
+    ? (news.headlineKo as string)
+    : news.headlineEn;
+  const summary = showingKo
+    ? news.summaryKo
+    : news.summaryEn;
+  const absoluteTime = formatAbsoluteTime(news.publishedAtIso);
 
   async function ask(path: Path) {
     setState({ kind: "loading", path });
@@ -67,13 +99,33 @@ export function NewsCard({ news }: NewsCardProps) {
   return (
     <article className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
       {/* news meta + title */}
-      <header className="flex items-center justify-between px-4 pt-4 pb-2">
+      <header className="flex items-center justify-between px-4 pt-4 pb-1.5">
         <span className="text-sm font-medium text-gray-500">{news.source}</span>
-        <span className="text-sm text-gray-400">{news.publishedAt}</span>
+        <span className="text-xs text-gray-400">
+          {news.publishedAt}
+          {absoluteTime && (
+            <span className="ml-1.5 text-gray-300">· {absoluteTime}</span>
+          )}
+        </span>
       </header>
-      <h2 className="px-4 pb-3 text-lg font-bold leading-snug text-gray-900">
-        {news.headline}
+      <h2 className="px-4 pb-2 text-lg font-bold leading-snug text-gray-900">
+        {headline}
       </h2>
+      {summary && (
+        <p className="px-4 pb-2 text-sm text-gray-600 leading-relaxed line-clamp-3">
+          {summary}
+        </p>
+      )}
+      {hasKo && (
+        <div className="px-4 pb-3">
+          <button
+            onClick={() => setLang(lang === "ko" ? "en" : "ko")}
+            className="text-xs text-gray-500 underline"
+          >
+            {lang === "ko" ? "원문 보기" : "한국어로 보기"}
+          </button>
+        </div>
+      )}
 
       {/* initial bubble (이해 완료 후 숨김) */}
       {showInitialBubble && (
