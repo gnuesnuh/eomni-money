@@ -24,14 +24,20 @@ const BUBBLE_BG: Record<SpeakerType, string> = {
 interface BubbleAreaProps {
   speakerType: SpeakerType;
   text: string;
+  badge?: string;
 }
 
-export function BubbleArea({ speakerType, text }: BubbleAreaProps) {
+export function BubbleArea({ speakerType, text, badge }: BubbleAreaProps) {
   return (
     <div className={`rounded-2xl p-4 ${BUBBLE_BG[speakerType]}`}>
       <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
         <span className="text-xl">{SPEAKER_EMOJI[speakerType]}</span>
         <span>{SPEAKER_INTRO[speakerType]}</span>
+        {badge && (
+          <span className="ml-auto text-xs font-medium bg-white/80 text-gray-600 rounded-full px-2 py-0.5">
+            {badge}
+          </span>
+        )}
       </div>
       <p className="text-lg leading-relaxed text-gray-900 whitespace-pre-line">
         {text}

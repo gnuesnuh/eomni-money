@@ -1,12 +1,19 @@
+"use client";
+
 import type { NewsCardData } from "@eomni/shared";
 import { BubbleArea } from "./BubbleArea";
-import { ExplainMore } from "./ExplainMore";
+import { ExplainMore, useExplainState } from "./ExplainMore";
 
 interface NewsCardProps {
   news: NewsCardData;
 }
 
 export function NewsCard({ news }: NewsCardProps) {
+  const { state, ask, reset } = useExplainState();
+
+  const displayBubble = state.bubble ?? news.bubble;
+  const showOriginal = state.mode === null || state.bubble === null;
+
   return (
     <article className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
       <header className="flex items-center justify-between px-4 pt-4 pb-2">
@@ -18,11 +25,38 @@ export function NewsCard({ news }: NewsCardProps) {
       </h2>
 
       <div className="px-4">
-        <BubbleArea speakerType={news.speakerType} text={news.bubble} />
+        {state.loading ? (
+          <div className="rounded-2xl bg-gray-50 p-4 text-center text-sm text-gray-500">
+            {state.mode === "simpler"
+              ? "더 쉽게 다시 설명 중..."
+              : "더 자세히 설명 중..."}
+          </div>
+        ) : (
+          <BubbleArea
+            speakerType={news.speakerType}
+            text={displayBubble}
+            badge={
+              !showOriginal
+                ? state.mode === "simpler"
+                  ? "더 쉽게"
+                  : "더 자세히"
+                : undefined
+            }
+          />
+        )}
+        {state.error && (
+          <p className="mt-2 text-xs text-red-500">{state.error}</p>
+        )}
       </div>
 
       <div className="px-4 pt-3">
-        <ExplainMore newsId={news.id} />
+        <ExplainMore
+          newsId={news.id}
+          activeMode={state.mode}
+          loading={state.loading}
+          onAsk={(mode) => ask(news.id, mode)}
+          onReset={reset}
+        />
       </div>
 
       {news.tickers.length > 0 && (

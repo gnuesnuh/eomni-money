@@ -135,6 +135,18 @@ export class DevController {
     let totalBubbles = 0;
     let totalUsage = { input: 0, output: 0 };
 
+    // Finnhub의 company-news는 시장 일반 뉴스를 여러 종목 응답에 동시에 반환한다.
+    // 같은 헤드라인을 여러 종목에 (각각) 변환하면 비용 + 피드 중복 발생.
+    // 이번 시드 실행 동안 본 헤드라인을 추적해 두 번째부턴 skip.
+    const headlinesSeenThisRun = new Set<string>();
+
+    // 또한 DB에 이미 같은 (speakerType, level, headline) 이 있으면 변환 안 함 (재실행 안전)
+    const existingForCombo = await this.prisma.newsBubble.findMany({
+      where: { speakerType, level },
+      select: { headlineEn: true },
+    });
+    existingForCombo.forEach((b) => headlinesSeenThisRun.add(b.headlineEn));
+
     for (const meta of SEED_STOCKS) {
       const t = meta.ticker;
       this.logger.log(`[seed] ${t} start`);
@@ -161,12 +173,9 @@ export class DevController {
 
         let created = 0;
         for (const n of top) {
-          // 같은 헤드라인 중복 방지: stockId + headline 같으면 skip
-          const exists = await this.prisma.newsBubble.findFirst({
-            where: { stockId: stock.id, headlineEn: n.headline, speakerType, level },
-            select: { id: true },
-          });
-          if (exists) continue;
+          // 글로벌 헤드라인 dedup: 다른 종목에서 이미 봤으면 skip
+          if (headlinesSeenThisRun.has(n.headline)) continue;
+          headlinesSeenThisRun.add(n.headline);
 
           const result = await this.claude.generateBubble({
             speakerType,

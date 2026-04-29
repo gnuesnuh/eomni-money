@@ -46,6 +46,15 @@ export class NewsService {
       fallback = true;
     }
 
+    // 같은 헤드라인이 여러 종목 응답에 동시에 나오는 경우(예: 메가캡 일반 뉴스)
+    // 피드 단에서 1건만 표출. 가장 최신(또는 첫 번째)을 유지.
+    const seen = new Set<string>();
+    bubbles = bubbles.filter((b) => {
+      if (seen.has(b.headlineEn)) return false;
+      seen.add(b.headlineEn);
+      return true;
+    });
+
     return {
       items: bubbles.map((b) => ({
         id: b.id,
