@@ -1,0 +1,28 @@
+{
+  "name": "eomni-money",
+  "version": "0.1.0",
+  "private": true,
+  "description": "엄니머니 - 시니어 주식 입문 앱",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:*",
+    "dev:web": "npm run dev -w @eomni/web",
+    "dev:api": "npm run start:dev -w @eomni/api",
+    "build": "npm run build -w @eomni/shared && npm run build -w @eomni/web && npm run build -w @eomni/api",
+    "build:web": "npm run build -w @eomni/web",
+    "build:api": "npm run build -w @eomni/api",
+    "build:shared": "npm run build -w @eomni/shared",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
