@@ -1,5 +1,8 @@
 import type { LessonStep } from "@/lib/lessons";
 import { PizzaVisual } from "./PizzaVisual";
+import { MarketVisual } from "./MarketVisual";
+import { NewsVisual } from "./NewsVisual";
+import { CoronaVisual } from "./CoronaVisual";
 
 interface Props {
   step: Extract<LessonStep, { type: "explain" }>;
@@ -23,6 +26,14 @@ export function StepExplain({ step, onNext }: Props) {
           <PizzaVisual />
         </div>
       )}
+      {step.visual === "market" && <MarketVisual />}
+      {step.visual === "news" && (
+        <div className="mb-3">
+          <NewsVisual />
+        </div>
+      )}
+      {step.visual === "corona" && <CoronaVisual />}
+
       <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 mb-4">
         <div className="text-sm font-semibold text-purple-800 mb-0.5">
           잘 하고 있어!

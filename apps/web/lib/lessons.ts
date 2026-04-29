@@ -60,8 +60,10 @@ export function pickTease(speaker: SpeakerType, idx: number): string {
 }
 
 // ───────────────────────────────────────────────
-// 레슨 1 — 회사 조각이 뭔가요?
+// 레슨 데이터 타입
 // ───────────────────────────────────────────────
+
+export type ExplainVisual = "pizza" | "market" | "news" | "corona";
 
 export type LessonStep =
   | {
@@ -69,7 +71,7 @@ export type LessonStep =
       hi: string;
       text: string;
       praise: string;
-      visual?: "pizza";
+      visual?: ExplainVisual;
     }
   | {
       type: "ox";
@@ -82,9 +84,11 @@ export type LessonStep =
       type: "multi";
       q: string;
       opts: string[];
-      answer: number; // 0-based
+      answer: number;
       okBody: string;
       ngBody: string;
+      /** 틀린 답 인덱스별 맞춤 피드백 (없으면 ngBody 사용) */
+      ngMap?: Record<number, string>;
     }
   | {
       type: "blank";
@@ -94,22 +98,70 @@ export type LessonStep =
       answer: number;
       okBody: string;
       ngBody: string;
+      ngMap?: Record<number, string>;
     }
   | { type: "complete" };
+
+export interface LessonBadge {
+  emoji: string;
+  perfectEmoji: string;
+  name: string; // "주식 새싹" / "주가 이해자"
+}
+
+export interface LessonShareCard {
+  title: string;
+  perfectBody: string;
+  normalBody: string;
+  badgeText: { perfect: string; normal: string };
+}
+
+export interface LessonConnectCard {
+  title: string;
+  text: string;
+  linkLabel: string;
+  linkHref: string;
+}
 
 export interface Lesson {
   id: number;
   title: string;
-  badge: { earned: string; perfect: string };
   steps: LessonStep[];
   premium: boolean;
+  badge: LessonBadge;
+  completeTitle: { perfect: string; normal: string };
+  completeSub: { perfect: string; normal: string };
+  shareCard: LessonShareCard;
+  connectCard?: LessonConnectCard;
+  nextLessonLabel: string; // "다음 레슨 바로 가기" / "레슨 3 보러 가기"
 }
 
+// ───────────────────────────────────────────────
+// LESSON 1 — 회사 조각이 뭔가요?
+// ───────────────────────────────────────────────
 export const LESSON_1: Lesson = {
   id: 1,
   title: "회사 조각이 뭔가요?",
-  badge: { earned: "🌱 주식 새싹", perfect: "🏆 퀴즈 천재 엄마" },
   premium: false,
+  badge: { emoji: "🌱", perfectEmoji: "🏆", name: "주식 새싹" },
+  completeTitle: {
+    perfect: "만점이야! 역시 엄마 ㅎㅎ",
+    normal: "레슨 1 완료!",
+  },
+  completeSub: {
+    perfect:
+      '"주식 새싹" 배지 획득!\n엄마 이제 나한테 가르쳐줄 수 있겠는데?',
+    normal:
+      '"주식 새싹" 배지 획득!\n틀린 것도 있지만 그래도 잘했어 ㅎㅎ',
+  },
+  shareCard: {
+    title: "엄마가 주식 공부 시작했어!",
+    perfectBody:
+      '레슨 1 "회사 조각이 뭔가요?" 완료!\n퀴즈 3개 다 맞췄어 ㅎㅎ 엄마 너무한 거 아니야?\n이제 주식이 뭔지 알 것 같아\n나도 이제 주식 새싹이야 🌱',
+    normalBody:
+      '레슨 1 "회사 조각이 뭔가요?" 완료!\n열심히 풀었어!\n이제 주식이 뭔지 알 것 같아\n나도 이제 주식 새싹이야 🌱',
+    badgeText: { perfect: "퀴즈 만점 배지", normal: "주식 새싹 배지" },
+  },
+  nextLessonLabel: "다음 레슨 바로 가기",
   steps: [
     {
       type: "explain",
@@ -163,6 +215,106 @@ export const LESSON_1: Lesson = {
   ],
 };
 
+// ───────────────────────────────────────────────
+// LESSON 2 — 올랐다 내렸다, 왜 그래요?
+// ───────────────────────────────────────────────
+export const LESSON_2: Lesson = {
+  id: 2,
+  title: "올랐다 내렸다, 왜 그래요?",
+  premium: false,
+  badge: { emoji: "📈", perfectEmoji: "📈🏆", name: "주가 이해자" },
+  completeTitle: {
+    perfect: "만점! 엄마 경제학자 다 됐네 ㅎㅎ",
+    normal: "레슨 2 완료!",
+  },
+  completeSub: {
+    perfect:
+      '"주가 이해자" 배지 획득!\n이제 뉴스 보면 주가가 보일 거야.\n나보다 더 잘 알 것 같아서 무서워 ㅋㅋ',
+    normal:
+      '"주가 이해자" 배지 획득!\n이제 뉴스 볼 때 주식이랑 연결해봐!',
+  },
+  shareCard: {
+    title: "엄마가 주식 공부 계속하고 있어!",
+    perfectBody:
+      '레슨 2 "올랐다 내렸다, 왜 그래요?" 완료!\n퀴즈 만점이야 ㅎㅎ\n이제 뉴스 보면 주가가 왜 움직이는지 알아!\n경제 공부 중인 엄마 🔥',
+    normalBody:
+      '레슨 2 "올랐다 내렸다, 왜 그래요?" 완료!\n열심히 풀었어!\n이제 뉴스 보면 주가가 왜 움직이는지 알아!\n경제 공부 중인 엄마 🔥',
+    badgeText: { perfect: "주가 이해자 배지", normal: "주가 이해자 배지" },
+  },
+  connectCard: {
+    title: "💡 뉴스 피드랑 연결돼!",
+    text: '이제 뉴스 피드에서 뉴스 보면\n"아, 이래서 올랐구나!" 하고 이해될 거야.',
+    linkLabel: "→ 오늘 뉴스 보러 가기",
+    linkHref: "/feed",
+  },
+  nextLessonLabel: "레슨 3 보러 가기",
+  steps: [
+    {
+      type: "explain",
+      hi: "엄마 김장철 배추값 알지?",
+      text: "김장철에 배추값이 왜 오르는지 알아?\n다들 배추 사려고 몰려들잖아!\n주식도 똑같아.\n사려는 사람이 많아지면 가격이 올라가.",
+      visual: "market",
+      praise:
+        "엄마 배추값은 알잖아~\n그거랑 주식이 완전 같은 원리야 ㅎㅎ\n이미 경제 전문가였던 거야!",
+    },
+    {
+      type: "explain",
+      hi: "그럼 뉴스랑 무슨 관계야?",
+      text: '뉴스가 사람들 마음을 움직여!\n"삼성 실적 대박" 뉴스 뜨면\n→ 다들 사고 싶어져\n→ 가격 올라!\n"삼성 공장 불났대" 뉴스 뜨면\n→ 다들 팔고 싶어져\n→ 가격 내려!',
+      visual: "news",
+      praise:
+        "이제 뉴스 보는 눈이 생긴 거야!\n엄마 나보다 빠른 거 맞지? ㅎㅎ",
+    },
+    {
+      type: "ox",
+      q: "삼성전자 주식을 사려는\n사람이 많아지면\n가격이 올라간다",
+      answer: "O",
+      okBody:
+        "엄마 배추 장사 해도 되겠다 ㅎㅎ\n사려는 사람 많으면 올라가는 거야!",
+      ngBody:
+        "엄마~ 김장철 배추값 생각해봐!\n다들 사려고 하면 오르잖아 ㅎㅎ\n주식도 딱 그거야!",
+    },
+    {
+      type: "explain",
+      hi: "실제로 이런 일 있었어!",
+      text: "2020년 코로나 터졌잖아.\n그때 여행회사 주식이 반토막 났어.\n아무도 여행 못 가니까\n여행사 팔자는 사람이 폭발한 거야.\n근데 마스크 회사 주식은?\n반대로 엄청 올랐어 ㅎㅎ",
+      visual: "corona",
+      praise:
+        "엄마 그때 기억하지?\n그게 다 주식이랑 연결된 거였어!\n이제 뉴스 보면 주식이 보일 거야 ㅎㅎ",
+    },
+    {
+      type: "multi",
+      q: "애플이 신제품 대박났다는\n뉴스가 떴어!\n주가는 어떻게 될까?",
+      opts: ["그대로야", "올라가", "내려가", "없어져"],
+      answer: 1,
+      okBody:
+        "대박 뉴스 → 사고 싶어짐 → 올라가!\n이제 완전히 이해한 거야!",
+      ngBody: '정답은 "올라가"야!',
+      ngMap: {
+        0: '엄마 그대로는 아니야 ㅎㅎ\n대박 뉴스 뜨면 다들 사려고 달려들잖아!\n정답은 "올라가"야!',
+        2: '엄마 좋은 뉴스인데 내려가겠어? ㅋㅋ\n대박 뉴스 → 다들 사고 싶어짐 → 올라가!',
+        3: '엄마 또 없어져 눌렀어?! ㅋㅋㅋ\n주식이 그렇게 쉽게 없어지면 아무도 안 하지~\n정답은 "올라가"야!',
+      },
+    },
+    {
+      type: "blank",
+      pre: "코로나 뉴스가 터졌을 때\n여행회사 주식은",
+      post: "",
+      opts: ["올랐어", "내렸어", "그대로", "없어졌어"],
+      answer: 1,
+      okBody:
+        "엄마 그때 기억 나지?\n다들 여행 못 갔잖아!\n그러니까 여행사 주식이 폭락한 거야.\n뉴스랑 주식이 이렇게 연결돼!",
+      ngBody: '정답은 "내렸어"야!',
+      ngMap: {
+        0: '엄마 코로나 때 여행 갔어? ㅋㅋ\n아무도 여행 못 가니까 "내렸어"가 정답이야!',
+        2: '그대로? ㅎㅎ 그 정도면 다행인데...\n정답은 "내렸어"야!\n여행 못 가니까 여행사가 힘들었던 거야.',
+        3: '없어졌어? ㅋㅋ 그건 아니야~\n정답은 "내렸어"야! 반토막이 났었거든.',
+      },
+    },
+    { type: "complete" },
+  ],
+};
+
 export const ALL_LESSONS: Array<{
   id: number;
   title: string;
@@ -177,5 +329,10 @@ export const ALL_LESSONS: Array<{
 
 export function getLesson(id: number): Lesson | null {
   if (id === 1) return LESSON_1;
-  return null; // Phase 2 에서 LESSON_2 ... 추가
+  if (id === 2) return LESSON_2;
+  return null;
+}
+
+export function nextLessonHref(currentId: number): string {
+  return `/study/${currentId + 1}`;
 }

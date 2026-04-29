@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Lesson } from "@/lib/lessons";
 
 interface Props {
   lesson: Lesson;
-  totalScore: number; // 이번 레슨에서 획득
+  totalScore: number;
   correctCount: number;
   perfect: boolean;
-  onShareReward: (days: number) => void; // 자녀 공유 시 호출
+  onShareReward: (days: number) => void;
 }
 
 export function StepComplete({
@@ -22,11 +23,19 @@ export function StepComplete({
   const router = useRouter();
   const [shared, setShared] = useState(false);
 
-  const badge = perfect ? "🏆" : "🌱";
-  const title = perfect ? "만점이야! 역시 엄마 ㅎㅎ" : "레슨 1 완료!";
-  const sub = perfect
-    ? '"주식 새싹" 배지 획득!\n엄마 이제 나한테 가르쳐줄 수 있겠는데?'
-    : '"주식 새싹" 배지 획득!\n틀린 것도 있지만 그래도 잘했어 ㅎㅎ';
+  const badgeIcon = perfect
+    ? lesson.badge.perfectEmoji
+    : lesson.badge.emoji;
+  const title = perfect
+    ? lesson.completeTitle.perfect
+    : lesson.completeTitle.normal;
+  const sub = perfect ? lesson.completeSub.perfect : lesson.completeSub.normal;
+  const shareBody = perfect
+    ? lesson.shareCard.perfectBody
+    : lesson.shareCard.normalBody;
+  const shareBadgeText = perfect
+    ? lesson.shareCard.badgeText.perfect
+    : lesson.shareCard.badgeText.normal;
 
   function handleShareToChild() {
     onShareReward(3);
@@ -38,7 +47,7 @@ export function StepComplete({
       <div className="px-4 py-5">
         <div className="text-center mb-4">
           <div className="w-20 h-20 rounded-full bg-purple-100 border-[3px] border-purple-700 flex items-center justify-center text-3xl mx-auto mb-2">
-            {badge}
+            {badgeIcon}
           </div>
         </div>
         <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-4 text-center mb-3">
@@ -62,7 +71,7 @@ export function StepComplete({
           onClick={() => router.push("/study")}
           className="w-full rounded-xl bg-purple-700 text-white py-3.5 text-sm font-semibold"
         >
-          다음 레슨 바로 가기 →
+          {lesson.nextLessonLabel} →
         </button>
       </div>
     );
@@ -73,7 +82,7 @@ export function StepComplete({
       {/* Badge */}
       <div className="text-center mb-4">
         <div className="w-20 h-20 rounded-full bg-purple-100 border-[3px] border-purple-700 flex items-center justify-center text-3xl mx-auto mb-2">
-          {badge}
+          {badgeIcon}
         </div>
         <div className="text-lg font-semibold mb-1">{title}</div>
         <p className="text-sm text-gray-500 leading-relaxed whitespace-pre-line">
@@ -85,8 +94,26 @@ export function StepComplete({
       <div className="grid grid-cols-3 gap-2 mb-4">
         <Stat val={`${totalScore}`} lbl="획득 점수" />
         <Stat val={`${correctCount}/3`} lbl="정답" />
-        <Stat val={badge} lbl="배지" />
+        <Stat val={badgeIcon} lbl="배지" />
       </div>
+
+      {/* Connect card (레슨에 따라) */}
+      {lesson.connectCard && (
+        <Link
+          href={lesson.connectCard.linkHref}
+          className="block rounded-xl bg-blue-50 border border-blue-300 px-4 py-3 mb-3"
+        >
+          <div className="text-sm font-semibold text-blue-900 mb-1">
+            {lesson.connectCard.title}
+          </div>
+          <p className="text-xs text-blue-800 leading-relaxed whitespace-pre-line mb-1.5">
+            {lesson.connectCard.text}
+          </p>
+          <span className="text-xs text-purple-700 font-semibold">
+            {lesson.connectCard.linkLabel}
+          </span>
+        </Link>
+      )}
 
       {/* Share card */}
       <div className="text-xs text-gray-500 font-medium mb-2">자랑하기</div>
@@ -98,14 +125,14 @@ export function StepComplete({
           <span className="text-[11px] text-white/50">엄니머니 · 공부방</span>
         </div>
         <div className="text-sm font-semibold mb-1.5">
-          엄마가 주식 공부 시작했어!
+          {lesson.shareCard.title}
         </div>
         <p className="text-xs text-white/80 leading-relaxed mb-2.5 whitespace-pre-line">
-          {`레슨 1 "${lesson.title}" 완료!\n${perfect ? "퀴즈 3개 다 맞췄어 ㅎㅎ 엄마 너무한 거 아니야?" : "열심히 풀었어!"}\n이제 주식이 뭔지 알 것 같아\n나도 이제 주식 새싹이야 🌱`}
+          {shareBody}
         </p>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-purple-100 text-purple-800 text-[11px] px-2.5 py-0.5 font-medium">
-            {perfect ? "퀴즈 만점" : "주식 새싹"} 배지
+            {shareBadgeText}
           </span>
           <span className="text-[11px] text-yellow-300 font-medium">
             {totalScore}점 획득
@@ -145,7 +172,7 @@ export function StepComplete({
         onClick={() => router.push("/study")}
         className="w-full rounded-xl bg-transparent border border-gray-200 text-gray-500 py-2.5 text-sm"
       >
-        다음 레슨 바로 가기
+        {lesson.nextLessonLabel}
       </button>
     </div>
   );

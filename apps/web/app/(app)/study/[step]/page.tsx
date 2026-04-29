@@ -40,7 +40,15 @@ export default function StudyStepPage() {
   useEffect(() => {
     if (stepType === "complete" && lesson) {
       const perfect = correct === 3;
-      const badge = perfect ? "trophy" : "sprout";
+      // 레슨별 배지 매핑 (study.ts BadgeKind 와 정합)
+      const badge =
+        lesson.id === 1
+          ? perfect
+            ? "trophy"
+            : "sprout"
+          : lesson.id === 2
+            ? "growth"
+            : "sprout";
       study.completeLesson(lesson.id, perfect, badge);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

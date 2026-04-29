@@ -63,7 +63,9 @@ export function StepBlank({ step, family, onAnswer, onNext }: Props) {
         <QuizFeedback
           ok={ok}
           family={ok ? family.ok : family.ng}
-          body={ok ? step.okBody : step.ngBody}
+          body={
+            ok ? step.okBody : (step.ngMap?.[picked] ?? step.ngBody)
+          }
           onNext={onNext}
         />
       )}
