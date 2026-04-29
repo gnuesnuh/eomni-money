@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+.git
+.env
+.env.local
+.env.*.local
+apps/web
+README.md
+DEPLOY.md
+*.log
+.DS_Store
+.vscode
+.idea
+*.tsbuildinfo
