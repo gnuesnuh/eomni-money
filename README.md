@@ -31,9 +31,30 @@ npm install
 # shared 패키지 빌드 (api/web이 참조하기 전에 1회)
 npm run build:shared
 
+# 환경 변수 (DATABASE_URL 등)
+cp .env.example apps/api/.env
+
+# Prisma 클라이언트 생성 (DB 연결 불필요)
+npm run prisma:generate -w @eomni/api
+
+# DB가 떠 있다면 마이그레이션 (스키마 → 실제 테이블)
+npm run prisma:migrate -w @eomni/api -- --name init
+
 # 개발 서버 동시 실행 (web :3000, api :3001)
 npm run dev
 ```
+
+### Postgres 빠르게 띄우기 (Docker)
+
+```bash
+docker run -d --name eomni-pg \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=eomni \
+  -p 5432:5432 \
+  postgres:16
+```
+
+그러면 `.env.example`의 기본 `DATABASE_URL`이 그대로 동작합니다.
 
 ## 워크스페이스 명령
 
@@ -103,7 +124,8 @@ cp .env.example .env.local
 - [x] 공통 타입 (`@eomni/shared`) — 화자 / 종목 / 뉴스 / 배지 계산
 - [x] 라우트 stub (web + api)
 - [x] 새벽 배치 스케줄 (5AM KST) — 구현 비어있음
-- [ ] PostgreSQL + Prisma 스키마
+- [x] PostgreSQL + Prisma 스키마 (스펙 §5의 5개 테이블 + enums)
+- [x] PrismaService 글로벌 모듈
 - [ ] Redis 캐시 레이어
 - [ ] Finnhub 클라이언트
 - [ ] Claude 말풍선 생성기

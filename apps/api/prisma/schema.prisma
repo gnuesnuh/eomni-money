@@ -1,0 +1,155 @@
+// 엄니머니 DB 스키마 (스펙 §5)
+//
+// 변경 후: cd apps/api && npx prisma migrate dev --name <설명>
+// 클라이언트만 재생성: npx prisma generate
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────────────────────────
+// Enums
+// ───────────────────────────────────────────────
+
+enum SpeakerType {
+  son
+  daughter
+  daughter_in_law
+  son_in_law
+}
+
+enum TargetType {
+  mother
+  father
+}
+
+enum LearningLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum StockBadge {
+  cheap
+  expensive
+  hot
+  warning
+  newsy
+}
+
+// ───────────────────────────────────────────────
+// 유저
+// ───────────────────────────────────────────────
+
+model User {
+  id           String        @id @default(cuid())
+  kakaoId      String?       @unique @map("kakao_id")
+  speakerType  SpeakerType   @map("speaker_type")
+  speakerName  String        @map("speaker_name")
+  targetType   TargetType    @map("target_type")
+  targetName   String        @map("target_name")
+  level        LearningLevel @default(beginner)
+  isSubscribed Boolean       @default(false) @map("is_subscribed")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  learnings UserLearning[]
+  watchlist Watchlist[]
+
+  @@map("users")
+}
+
+// ───────────────────────────────────────────────
+// 종목
+// ───────────────────────────────────────────────
+
+model Stock {
+  id             String      @id @default(cuid())
+  ticker         String      @unique
+  nameKo         String      @map("name_ko")
+  nameEn         String      @map("name_en")
+  descriptionKo  String      @map("description_ko")
+  logoUrl        String?     @map("logo_url")
+  exchange       String
+  week52High     Float       @map("week52_high")
+  week52Low      Float       @map("week52_low")
+  currentPrice   Float?      @map("current_price")
+  changePct      Float?      @map("change_pct")
+  badge          StockBadge?
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  newsBubbles NewsBubble[]
+  watchedBy   Watchlist[]
+
+  @@index([badge])
+  @@index([ticker])
+  @@map("stocks")
+}
+
+// ───────────────────────────────────────────────
+// 뉴스 말풍선 캐시
+//   - 화자/수준 별로 미리 생성하여 LLM 비용 절감
+//   - 새벽 5시 KST 배치에서 채움
+// ───────────────────────────────────────────────
+
+model NewsBubble {
+  id          String        @id @default(cuid())
+  stockId     String?       @map("stock_id")
+  source      String
+  headlineEn  String        @map("headline_en")
+  summaryEn   String        @map("summary_en") @db.Text
+  bubbleKo    String        @map("bubble_ko") @db.Text
+  speakerType SpeakerType   @map("speaker_type")
+  level       LearningLevel
+  publishedAt DateTime?     @map("published_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  stock Stock? @relation(fields: [stockId], references: [id], onDelete: SetNull)
+
+  @@index([stockId])
+  @@index([speakerType, level])
+  @@index([createdAt])
+  @@map("news_bubbles")
+}
+
+// ───────────────────────────────────────────────
+// 학습 기록 (배운 단어 → 다음에 자동 수준 조정)
+// ───────────────────────────────────────────────
+
+model UserLearning {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  word       String
+  learnedAt  DateTime @default(now()) @map("learned_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, word])
+  @@index([userId])
+  @@map("user_learnings")
+}
+
+// ───────────────────────────────────────────────
+// 찜 종목 (무료 3개 / 구독 무제한)
+// ───────────────────────────────────────────────
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  stockId   String   @map("stock_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stock Stock @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, stockId])
+  @@index([userId])
+  @@map("watchlist")
+}

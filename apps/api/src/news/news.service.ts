@@ -1,11 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import type { NewsCardData } from "@eomni/shared";
+import { PrismaService } from "../prisma/prisma.service";
 import { ExplainDto } from "./dto/explain.dto";
 
 @Injectable()
 export class NewsService {
+  constructor(private readonly prisma: PrismaService) {}
+
   async findFeed(_filter?: string): Promise<NewsCardData[]> {
-    // TODO: PostgreSQL news_bubbles 조회 + Redis 캐시
+    // TODO: prisma.newsBubble.findMany({ where: { speakerType, level }, orderBy: { createdAt: "desc" } })
+    //       + Redis 캐시
     return [
       {
         id: "1",

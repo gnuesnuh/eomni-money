@@ -1,10 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { calculateBadge, type Stock } from "@eomni/shared";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class StocksService {
+  constructor(private readonly prisma: PrismaService) {}
+
   async findAll(_badge?: string): Promise<Stock[]> {
-    // TODO: PostgreSQL stocks 조회 + Redis 캐시(quote)와 병합
+    // TODO: prisma.stock.findMany({ where: badge ? { badge } : {} })
+    //       + Redis 캐시(quote)와 병합
     const sample: Stock = {
       id: "stock-1",
       ticker: "AAPL",

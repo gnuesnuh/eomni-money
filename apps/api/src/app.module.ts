@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 import { HealthController } from "./health.controller";
+import { PrismaModule } from "./prisma/prisma.module";
 import { NewsModule } from "./news/news.module";
 import { StocksModule } from "./stocks/stocks.module";
 import { UsersModule } from "./users/users.module";
@@ -15,6 +16,7 @@ import { BatchModule } from "./batch/batch.module";
       envFilePath: [".env.local", ".env"],
     }),
     ScheduleModule.forRoot(),
+    PrismaModule,
     NewsModule,
     StocksModule,
     UsersModule,
