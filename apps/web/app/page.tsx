@@ -12,11 +12,6 @@ export default function LandingPage() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // 이미 프로필 있으면 피드로 보냄
-  useEffect(() => {
-    if (loaded && profile) router.replace("/feed");
-  }, [loaded, profile, router]);
-
   // ?error= 쿼리 표시
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -26,12 +21,16 @@ export default function LandingPage() {
   }, []);
 
   async function handleStart() {
+    // 이미 프로필 있는 사용자 → 피드로
+    if (profile) {
+      router.push("/feed");
+      return;
+    }
     setBusy(true);
     setAuthError(null);
     try {
       if (!isSupabaseConfigured()) {
-        // OAuth 미설정 → 로컬 온보딩으로만 진행 (MVP)
-        router.push("/onboarding");
+        router.push("/onboarding"); // OAuth 미설정 시 로컬 온보딩
         return;
       }
       await signInWithKakao("/onboarding");
@@ -41,11 +40,12 @@ export default function LandingPage() {
     }
   }
 
-  if (loaded && profile) return null; // redirect 중
+  // 로그인된 사용자 vs 신규 사용자 구분 (로딩 중엔 신규로 가정)
+  const hasProfile = loaded && !!profile;
 
   return (
     <div className="min-h-screen bg-stone-50 text-gray-900">
-      <NavBar onStart={handleStart} busy={busy} />
+      <NavBar onStart={handleStart} busy={busy} hasProfile={hasProfile} />
 
       {authError && (
         <div className="mx-4 mt-20 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
@@ -53,7 +53,7 @@ export default function LandingPage() {
         </div>
       )}
 
-      <Hero onStart={handleStart} busy={busy} />
+      <Hero onStart={handleStart} busy={busy} hasProfile={hasProfile} />
       <Divider />
       <HowItWorks />
       <Divider />
@@ -61,10 +61,10 @@ export default function LandingPage() {
       <Divider />
       <Features />
       <Divider />
-      <Pricing onStart={handleStart} />
+      <Pricing onStart={handleStart} hasProfile={hasProfile} />
       <Referral />
       <Divider />
-      <FinalCta onStart={handleStart} busy={busy} />
+      <FinalCta onStart={handleStart} busy={busy} hasProfile={hasProfile} />
       <Footer />
     </div>
   );
@@ -77,7 +77,15 @@ const TEAL = "#1D9E75";
 // ───────────────────────────────────────────
 // NAV
 // ───────────────────────────────────────────
-function NavBar({ onStart, busy }: { onStart: () => void; busy: boolean }) {
+function NavBar({
+  onStart,
+  busy,
+  hasProfile,
+}: {
+  onStart: () => void;
+  busy: boolean;
+  hasProfile: boolean;
+}) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-stone-50/90 backdrop-blur border-b border-stone-200">
       <div className="font-display text-xl font-bold tracking-tight">
@@ -89,7 +97,7 @@ function NavBar({ onStart, busy }: { onStart: () => void; busy: boolean }) {
         disabled={busy}
         className="rounded-full bg-[#534AB7] hover:bg-[#3C3489] text-white text-sm font-medium px-5 py-2.5 transition disabled:opacity-50"
       >
-        {busy ? "이동 중..." : "카카오로 시작하기"}
+        {busy ? "이동 중..." : hasProfile ? "내 피드로 가기 →" : "카카오로 시작하기"}
       </button>
     </nav>
   );
@@ -98,7 +106,15 @@ function NavBar({ onStart, busy }: { onStart: () => void; busy: boolean }) {
 // ───────────────────────────────────────────
 // HERO
 // ───────────────────────────────────────────
-function Hero({ onStart, busy }: { onStart: () => void; busy: boolean }) {
+function Hero({
+  onStart,
+  busy,
+  hasProfile,
+}: {
+  onStart: () => void;
+  busy: boolean;
+  hasProfile: boolean;
+}) {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-28 pb-16 text-center overflow-hidden">
       {/* deco circles */}
@@ -136,8 +152,14 @@ function Hero({ onStart, busy }: { onStart: () => void; busy: boolean }) {
             disabled={busy}
             className="inline-flex items-center gap-2 rounded-2xl bg-[#FEE500] text-[#3A1D00] font-bold px-7 py-3.5 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-yellow-200 disabled:opacity-50"
           >
-            <KakaoIcon />
-            카카오로 시작하기
+            {hasProfile ? (
+              <>내 피드로 가기 →</>
+            ) : (
+              <>
+                <KakaoIcon />
+                카카오로 시작하기
+              </>
+            )}
           </button>
           <a
             href="#how"
@@ -418,7 +440,13 @@ function Features() {
 // ───────────────────────────────────────────
 // PRICING
 // ───────────────────────────────────────────
-function Pricing({ onStart }: { onStart: () => void }) {
+function Pricing({
+  onStart,
+  hasProfile: _hasProfile,
+}: {
+  onStart: () => void;
+  hasProfile: boolean;
+}) {
   return (
     <section className="max-w-5xl mx-auto px-6 py-20 text-center">
       <SectionLabel>요금제</SectionLabel>
@@ -631,9 +659,11 @@ function Referral() {
 function FinalCta({
   onStart,
   busy,
+  hasProfile,
 }: {
   onStart: () => void;
   busy: boolean;
+  hasProfile: boolean;
 }) {
   return (
     <div className="px-6 pb-20">
@@ -660,8 +690,14 @@ function FinalCta({
           disabled={busy}
           className="inline-flex items-center gap-2 rounded-2xl bg-[#FEE500] text-[#3A1D00] font-bold px-8 py-4 hover:-translate-y-0.5 transition disabled:opacity-50"
         >
-          <KakaoIcon size={20} />
-          {busy ? "이동 중..." : "카카오로 시작하기"}
+          {hasProfile ? (
+            <>내 피드로 가기 →</>
+          ) : (
+            <>
+              <KakaoIcon size={20} />
+              {busy ? "이동 중..." : "카카오로 시작하기"}
+            </>
+          )}
         </button>
       </div>
     </div>
