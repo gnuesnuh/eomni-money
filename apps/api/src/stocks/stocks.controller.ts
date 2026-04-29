@@ -16,8 +16,12 @@ export class StocksController {
   }
 
   @Get(":ticker/news")
-  news(@Param("ticker") ticker: string) {
-    return this.stocks.recentNews(ticker);
+  news(
+    @Param("ticker") ticker: string,
+    @Query("speaker") speakerType?: string,
+    @Query("level") level?: string,
+  ) {
+    return this.stocks.recentNews(ticker, { speakerType, level });
   }
 
   @Get(":ticker/explain")

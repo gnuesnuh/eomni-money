@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { Stock } from "@eomni/shared";
 import { StockCard } from "@/components/stocks/StockCard";
 import { PersonaHeader } from "@/components/PersonaHeader";
+import { TabBar } from "@/components/TabBar";
 import { useProfile } from "@/lib/profile";
 
 export default function StocksPage() {
@@ -28,6 +29,7 @@ export default function StocksPage() {
   return (
     <>
       {profile && <PersonaHeader profile={profile} />}
+      <TabBar />
       <main className="px-4 py-6">
         <h1 className="text-2xl font-bold mb-4">종목 둘러보기</h1>
         {error && <div className="text-red-500">연결 실패: {error}</div>}

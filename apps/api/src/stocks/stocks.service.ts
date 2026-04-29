@@ -80,32 +80,69 @@ export class StocksService {
     };
   }
 
-  async recentNews(ticker: string) {
+  async recentNews(
+    ticker: string,
+    opts: { speakerType?: string; level?: string } = {},
+  ) {
     const t = ticker.toUpperCase();
     const stock = await this.prisma.stock.findUnique({ where: { ticker: t } });
     if (!stock) throw new NotFoundException(`stock ${t} not registered`);
 
-    // DB의 말풍선 캐시(아들/beginner/initial 우선)
-    const bubbles = await this.prisma.newsBubble.findMany({
+    const speakerType = isSpeakerType(opts.speakerType)
+      ? opts.speakerType
+      : "son";
+    const level = isLevelType(opts.level) ? opts.level : "beginner";
+
+    // 요청한 화자/수준의 initial 말풍선
+    let bubbles = await this.prisma.newsBubble.findMany({
       where: {
         stockId: stock.id,
-        speakerType: "son",
-        level: "beginner",
+        speakerType,
+        level,
         mode: "initial",
       },
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
       take: 10,
     });
+    let fallback = false;
+
+    // 매치 없으면 (son, beginner) 폴백 — 피드와 동일한 정책
+    if (bubbles.length === 0) {
+      bubbles = await this.prisma.newsBubble.findMany({
+        where: {
+          stockId: stock.id,
+          speakerType: "son",
+          level: "beginner",
+          mode: "initial",
+        },
+        orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+        take: 10,
+      });
+      fallback = true;
+    }
 
     return {
       ticker: t,
+      stockNameKo: stock.nameKo,
+      currentPrice: stock.currentPrice,
+      changePct: stock.changePct,
       count: bubbles.length,
+      fallback,
       news: bubbles.map((b) => ({
         id: b.id,
         source: b.source,
-        headline: b.headlineEn,
+        headline: b.headlineKo ?? b.headlineEn,
+        headlineKo: b.headlineKo,
+        headlineEn: b.headlineEn,
+        summaryKo: b.summaryKo,
+        summaryEn: b.summaryEn,
         bubble: b.bubbleKo,
-        publishedAt: (b.publishedAt ?? b.createdAt).toISOString(),
+        speakerType: b.speakerType,
+        publishedAt: relativeTimeKo(b.publishedAt ?? b.createdAt),
+        publishedAtIso: (b.publishedAt ?? b.createdAt).toISOString(),
+        tickers: [
+          { ticker: stock.ticker, changePct: stock.changePct ?? 0 },
+        ],
       })),
     };
   }
@@ -127,4 +164,33 @@ export class StocksService {
 
 function isStockBadge(s: string): s is StockBadge {
   return ["cheap", "expensive", "hot", "warning", "newsy"].includes(s);
+}
+
+function isSpeakerType(
+  s: string | undefined,
+): s is "son" | "daughter" | "daughter_in_law" | "son_in_law" {
+  return (
+    s === "son" ||
+    s === "daughter" ||
+    s === "daughter_in_law" ||
+    s === "son_in_law"
+  );
+}
+
+function isLevelType(
+  s: string | undefined,
+): s is "beginner" | "intermediate" | "advanced" {
+  return s === "beginner" || s === "intermediate" || s === "advanced";
+}
+
+function relativeTimeKo(d: Date): string {
+  const ms = Date.now() - d.getTime();
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return "방금 전";
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}일 전`;
+  return d.toISOString().slice(0, 10);
 }
