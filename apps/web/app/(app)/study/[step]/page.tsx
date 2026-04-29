@@ -25,6 +25,8 @@ export default function StudyStepPage() {
   const [correct, setCorrect] = useState(0);
   const [touched, setTouched] = useState(false);
 
+  const stepType = lesson?.steps[cur]?.type;
+
   // 첫 렌더 시 스트릭 한 번만 갱신
   useEffect(() => {
     if (study.loaded && !touched) {
@@ -33,6 +35,16 @@ export default function StudyStepPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [study.loaded]);
+
+  // complete step 진입 시 1회만 레슨 완료 기록
+  useEffect(() => {
+    if (stepType === "complete" && lesson) {
+      const perfect = correct === 3;
+      const badge = perfect ? "trophy" : "sprout";
+      study.completeLesson(lesson.id, perfect, badge);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepType]);
 
   if (!profileLoaded || !study.loaded) {
     return <div className="p-8 text-gray-400">불러오는 중...</div>;
@@ -68,17 +80,6 @@ export default function StudyStepPage() {
       study.addScore(10);
     }
   }
-
-  // complete step 진입 시 1회만 레슨 완료 기록
-  useEffect(() => {
-    if (step.type === "complete") {
-      const perfect = correct === 3;
-      const badge = perfect ? "trophy" : "sprout";
-      // useStudy 의 completeLesson 은 idempotent (이미 있으면 skip)
-      study.completeLesson(lesson.id, perfect, badge);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step.type]);
 
   return (
     <main className="min-h-screen bg-stone-50 pb-6">
