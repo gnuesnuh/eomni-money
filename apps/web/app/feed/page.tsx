@@ -93,6 +93,11 @@ export default function FeedPage() {
     : 0;
   const showLimitCard =
     feed != null && !sub.isSubscribed && visibleItems.length >= sub.freeLimit;
+  // 6번째 카드를 살짝 보여주는 paywall teaser
+  const teaserItem =
+    feed && !sub.isSubscribed && hiddenCount > 0
+      ? feed.items[sub.freeLimit]
+      : null;
 
   return (
     <>
@@ -149,10 +154,23 @@ export default function FeedPage() {
                 freeLimit={sub.freeLimit}
               />
             )}
-            {sub.isSubscribed && hiddenCount > 0 && (
-              // 구독자는 모든 항목 노출 — 이 분기에 도달할 일 없음, 안전 가드
-              <div className="text-xs text-gray-400 text-center">
-                +{hiddenCount}개 더 (구독 중)
+            {teaserItem && (
+              <div className="relative">
+                {/* 블러된 6번째 카드 — 클릭 막음 */}
+                <div
+                  className="pointer-events-none select-none blur-sm opacity-60"
+                  aria-hidden
+                >
+                  <NewsCard news={teaserItem} />
+                </div>
+                {/* 하단 페이드 + 구독 CTA */}
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-white pointer-events-none rounded-b-2xl" />
+                <Link
+                  href="/subscribe"
+                  className="absolute inset-x-0 bottom-3 mx-auto w-fit text-sm font-semibold text-orange-600 bg-white/95 border border-orange-200 rounded-full px-4 py-2 shadow-sm"
+                >
+                  구독하면 +{hiddenCount}개 더 보여드려요
+                </Link>
               </div>
             )}
           </div>
