@@ -35,9 +35,9 @@ async function bootstrap() {
   app.setGlobalPrefix("api");
 
   const port = Number(process.env.PORT ?? 3001);
-  await app.listen(port);
+  await app.listen(port, "0.0.0.0"); // Railway/컨테이너 환경에선 0.0.0.0 바인딩 필수
   // eslint-disable-next-line no-console
-  console.log(`🚀 엄니머니 API listening on http://localhost:${port}/api`);
+  console.log(`🚀 엄니머니 API listening on http://0.0.0.0:${port}/api`);
 }
 
 bootstrap();
