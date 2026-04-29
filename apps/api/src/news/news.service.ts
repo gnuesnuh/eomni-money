@@ -75,7 +75,7 @@ export class NewsService {
 
   private fetchBubbles(speakerType: SpeakerType, level: LearningLevel) {
     return this.prisma.newsBubble.findMany({
-      where: { speakerType, level },
+      where: { speakerType, level, mode: "initial" },
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
       take: 30,
       include: {
@@ -99,23 +99,68 @@ export class NewsService {
   }
 
   async explain(id: string, dto: ExplainDto) {
-    const bubble = await this.prisma.newsBubble.findUnique({
+    // 호출 패턴: id 는 피드의 initial 말풍선 row id.
+    // 같은 (stockId, headlineEn, speakerType, level) 의 mode=simpler/deeper 가 DB에 있으면 캐시 hit,
+    // 없으면 Claude 호출 → 저장 → 반환 (lazy persist 하이브리드).
+    const initial = await this.prisma.newsBubble.findUnique({
       where: { id },
       include: { stock: true },
     });
-    if (!bubble) return { error: "not_found" };
+    if (!initial) return { error: "not_found" as const };
 
+    const targetMode = dto.mode === "simpler" ? "simpler" : "deeper";
+
+    // 1) 캐시 조회
+    const cached = await this.prisma.newsBubble.findFirst({
+      where: {
+        stockId: initial.stockId,
+        headlineEn: initial.headlineEn,
+        speakerType: initial.speakerType,
+        level: initial.level,
+        mode: targetMode,
+      },
+    });
+    if (cached) {
+      return {
+        id: cached.id,
+        mode: targetMode,
+        bubble: cached.bubbleKo,
+        cached: true,
+      };
+    }
+
+    // 2) 캐시 미스 → 생성 후 저장
     const result = await this.claude.generateBubble({
-      speakerType: bubble.speakerType,
-      level: bubble.level,
-      headline: bubble.headlineEn,
-      summary: bubble.summaryEn,
-      ticker: bubble.stock?.ticker,
-      companyKo: bubble.stock?.nameKo,
+      speakerType: initial.speakerType,
+      level: initial.level,
+      headline: initial.headlineEn,
+      summary: initial.summaryEn,
+      ticker: initial.stock?.ticker,
+      companyKo: initial.stock?.nameKo,
       mode: dto.mode,
     });
 
-    return { id, mode: dto.mode, bubble: result.bubble, usage: result.usage };
+    const persisted = await this.prisma.newsBubble.create({
+      data: {
+        stockId: initial.stockId,
+        source: initial.source,
+        headlineEn: initial.headlineEn,
+        summaryEn: initial.summaryEn,
+        bubbleKo: result.bubble,
+        speakerType: initial.speakerType,
+        level: initial.level,
+        mode: targetMode,
+        publishedAt: initial.publishedAt,
+      },
+    });
+
+    return {
+      id: persisted.id,
+      mode: targetMode,
+      bubble: result.bubble,
+      cached: false,
+      usage: result.usage,
+    };
   }
 
   // (speakerType, level) 조합용 말풍선이 없는 뉴스를 찾아 새로 생성
@@ -123,14 +168,14 @@ export class NewsService {
     speakerType: SpeakerType,
     level: LearningLevel,
   ): Promise<{ created: number; skipped: number; usage: { input: number; output: number } }> {
-    // 기준: (son, beginner) 으로 변환된 모든 뉴스가 'canonical' 뉴스 셋
+    // 기준: (son, beginner, initial) 으로 변환된 모든 뉴스가 'canonical' 뉴스 셋
     const sourceBubbles = await this.prisma.newsBubble.findMany({
-      where: { speakerType: "son", level: "beginner" },
+      where: { speakerType: "son", level: "beginner", mode: "initial" },
       include: { stock: true },
     });
 
     const existingForCombo = await this.prisma.newsBubble.findMany({
-      where: { speakerType, level },
+      where: { speakerType, level, mode: "initial" },
       select: { stockId: true, headlineEn: true },
     });
     const existingKey = new Set(
@@ -166,6 +211,7 @@ export class NewsService {
           bubbleKo: result.bubble,
           speakerType,
           level,
+          mode: "initial",
           publishedAt: src.publishedAt,
         },
       });

@@ -195,6 +195,7 @@ export class DevController {
               bubbleKo: result.bubble,
               speakerType,
               level,
+              mode: "initial",
               publishedAt: new Date(n.datetime * 1000),
             },
           });

@@ -43,6 +43,12 @@ enum StockBadge {
   newsy
 }
 
+enum ExplainMode {
+  initial // 피드 기본 말풍선
+  simpler // 더 쉽게 (비유 변경, 더 짧게)
+  deeper  // 더 자세히 (같은 수준, 인과관계까지)
+}
+
 // ───────────────────────────────────────────────
 // 유저
 // ───────────────────────────────────────────────
@@ -108,13 +114,14 @@ model NewsBubble {
   bubbleKo    String        @map("bubble_ko") @db.Text
   speakerType SpeakerType   @map("speaker_type")
   level       LearningLevel
+  mode        ExplainMode   @default(initial)
   publishedAt DateTime?     @map("published_at")
   createdAt   DateTime      @default(now()) @map("created_at")
 
   stock Stock? @relation(fields: [stockId], references: [id], onDelete: SetNull)
 
   @@index([stockId])
-  @@index([speakerType, level])
+  @@index([speakerType, level, mode])
   @@index([createdAt])
   @@map("news_bubbles")
 }

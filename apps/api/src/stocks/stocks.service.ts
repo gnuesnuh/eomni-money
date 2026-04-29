@@ -85,9 +85,14 @@ export class StocksService {
     const stock = await this.prisma.stock.findUnique({ where: { ticker: t } });
     if (!stock) throw new NotFoundException(`stock ${t} not registered`);
 
-    // DB의 말풍선 캐시(아들/beginner 우선)
+    // DB의 말풍선 캐시(아들/beginner/initial 우선)
     const bubbles = await this.prisma.newsBubble.findMany({
-      where: { stockId: stock.id, speakerType: "son", level: "beginner" },
+      where: {
+        stockId: stock.id,
+        speakerType: "son",
+        level: "beginner",
+        mode: "initial",
+      },
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
       take: 10,
     });
