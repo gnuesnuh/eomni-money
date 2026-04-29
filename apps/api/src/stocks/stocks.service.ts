@@ -1,5 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { calculateBadge, type Stock } from "@eomni/shared";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { calculateBadge, type Stock, type StockBadge } from "@eomni/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { FinnhubService } from "../integrations/finnhub/finnhub.service";
 
@@ -12,83 +12,114 @@ export class StocksService {
     private readonly finnhub: FinnhubService,
   ) {}
 
-  async findAll(_badge?: string): Promise<Stock[]> {
-    // TODO: prisma.stock.findMany({ where: badge ? { badge } : {} })
-    //       + Redis 캐시(quote)와 병합
-    const sample: Stock = {
-      id: "stock-1",
-      ticker: "AAPL",
-      nameKo: "애플",
-      nameEn: "Apple Inc.",
-      descriptionKo: "아이폰 만드는 회사",
-      logoUrl: null,
-      exchange: "NASDAQ",
-      week52High: 210,
-      week52Low: 165,
-      currentPrice: 189,
-      changePct: 1.2,
-      badge: calculateBadge({
-        currentPrice: 189,
-        week52High: 210,
-        week52Low: 165,
-        changePct: 1.2,
-        newsCount: 2,
-      }),
-      updatedAt: new Date().toISOString(),
-    };
-    return [sample];
+  async findAll(badge?: string): Promise<Stock[]> {
+    const where = badge && isStockBadge(badge) ? { badge } : {};
+    const rows = await this.prisma.stock.findMany({
+      where,
+      orderBy: { ticker: "asc" },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      ticker: r.ticker,
+      nameKo: r.nameKo,
+      nameEn: r.nameEn,
+      descriptionKo: r.descriptionKo,
+      logoUrl: r.logoUrl,
+      exchange: r.exchange,
+      week52High: r.week52High,
+      week52Low: r.week52Low,
+      currentPrice: r.currentPrice ?? 0,
+      changePct: r.changePct ?? 0,
+      badge: r.badge,
+      updatedAt: r.updatedAt.toISOString(),
+    }));
   }
 
   async findOne(ticker: string) {
     const t = ticker.toUpperCase();
+    const stock = await this.prisma.stock.findUnique({ where: { ticker: t } });
+    if (!stock) throw new NotFoundException(`stock ${t} not registered`);
+
+    // 실시간 가격 + 배지 재계산 (캐시는 Phase 1에선 생략)
+    let liveQuote = null;
     try {
-      const quote = await this.finnhub.getQuote(t);
-      return {
-        ticker: t,
-        currentPrice: quote.c,
-        changePct: quote.dp,
-        change: quote.d,
-        high: quote.h,
-        low: quote.l,
-        open: quote.o,
-        previousClose: quote.pc,
-        timestamp: new Date(quote.t * 1000).toISOString(),
+      const q = await this.finnhub.getQuote(t);
+      liveQuote = {
+        currentPrice: q.c,
+        changePct: q.dp,
       };
     } catch (err) {
-      this.logger.error(`findOne(${t}) failed: ${(err as Error).message}`);
-      throw err;
+      this.logger.warn(
+        `Finnhub quote(${t}) failed, falling back to DB cache: ${(err as Error).message}`,
+      );
     }
+
+    const currentPrice = liveQuote?.currentPrice ?? stock.currentPrice ?? 0;
+    const changePct = liveQuote?.changePct ?? stock.changePct ?? 0;
+
+    const badge = calculateBadge({
+      currentPrice,
+      week52High: stock.week52High,
+      week52Low: stock.week52Low,
+      changePct,
+      newsCount: 0, // TODO: 최근 24시간 newsBubble 카운트
+    });
+
+    return {
+      id: stock.id,
+      ticker: stock.ticker,
+      nameKo: stock.nameKo,
+      nameEn: stock.nameEn,
+      descriptionKo: stock.descriptionKo,
+      currentPrice,
+      changePct,
+      week52High: stock.week52High,
+      week52Low: stock.week52Low,
+      badge,
+      updatedAt: new Date().toISOString(),
+    };
   }
 
   async recentNews(ticker: string) {
     const t = ticker.toUpperCase();
-    const news = await this.finnhub.getCompanyNews(t, { days: 7 });
+    const stock = await this.prisma.stock.findUnique({ where: { ticker: t } });
+    if (!stock) throw new NotFoundException(`stock ${t} not registered`);
+
+    // DB의 말풍선 캐시(아들/beginner 우선)
+    const bubbles = await this.prisma.newsBubble.findMany({
+      where: { stockId: stock.id, speakerType: "son", level: "beginner" },
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      take: 10,
+    });
+
     return {
       ticker: t,
-      count: news.length,
-      news: news.slice(0, 10).map((n) => ({
-        id: n.id,
-        source: n.source,
-        headline: n.headline,
-        summary: n.summary,
-        url: n.url,
-        publishedAt: new Date(n.datetime * 1000).toISOString(),
-        image: n.image || null,
+      count: bubbles.length,
+      news: bubbles.map((b) => ({
+        id: b.id,
+        source: b.source,
+        headline: b.headlineEn,
+        bubble: b.bubbleKo,
+        publishedAt: (b.publishedAt ?? b.createdAt).toISOString(),
       })),
     };
   }
 
   async explainPrice(ticker: string, direction?: "up" | "down") {
-    // TODO: Claude bubble (다음 단계)
+    // TODO: 가장 최근 뉴스 1건 → Claude bubble (현재 NewsService.explain 활용)
     return {
       ticker: ticker.toUpperCase(),
       direction: direction ?? "down",
-      bubble: "TODO: 왜 싸졌는지 / 비싸졌는지 말풍선 (Claude 연동 후)",
+      bubble: "TODO: 가장 영향 큰 최근 뉴스 1건 기반 설명",
     };
   }
 
   async addToWatchlist(ticker: string) {
-    // TODO: prisma.watchlist.create (free 3개 제한)
+    // TODO: 인증 붙이고 prisma.watchlist.create (free 3개 제한)
     return { ticker: ticker.toUpperCase(), watched: true };
   }
+}
+
+function isStockBadge(s: string): s is StockBadge {
+  return ["cheap", "expensive", "hot", "warning", "newsy"].includes(s);
 }

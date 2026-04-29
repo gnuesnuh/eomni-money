@@ -1,8 +1,17 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Query,
+} from "@nestjs/common";
 import { IsIn, IsOptional, IsString, MinLength } from "class-validator";
 import type { LearningLevel, SpeakerType } from "@eomni/shared";
 import { ClaudeService } from "../integrations/claude/claude.service";
 import { FinnhubService } from "../integrations/finnhub/finnhub.service";
+import { PrismaService } from "../prisma/prisma.service";
 
 class BubbleDto {
   @IsString() @MinLength(3)
@@ -27,18 +36,35 @@ class BubbleDto {
   mode?: "initial" | "simpler" | "deeper";
 }
 
+// 시드용 종목 카탈로그 — 한국 시니어가 알 만한 미국 대표 종목
+const SEED_STOCKS: Array<{
+  ticker: string;
+  nameKo: string;
+  nameEn: string;
+  descriptionKo: string;
+  exchange: string;
+}> = [
+  { ticker: "AAPL", nameKo: "애플", nameEn: "Apple Inc.", descriptionKo: "아이폰 만드는 회사", exchange: "NASDAQ" },
+  { ticker: "NVDA", nameKo: "엔비디아", nameEn: "NVIDIA Corp.", descriptionKo: "AI 칩 만드는 회사", exchange: "NASDAQ" },
+  { ticker: "TSLA", nameKo: "테슬라", nameEn: "Tesla Inc.", descriptionKo: "전기차 만드는 회사", exchange: "NASDAQ" },
+  { ticker: "MSFT", nameKo: "마이크로소프트", nameEn: "Microsoft Corp.", descriptionKo: "윈도우 만드는 회사", exchange: "NASDAQ" },
+  { ticker: "AMZN", nameKo: "아마존", nameEn: "Amazon.com", descriptionKo: "쿠팡같은 미국 회사", exchange: "NASDAQ" },
+];
+
 @Controller("dev")
 export class DevController {
+  private readonly logger = new Logger(DevController.name);
+
   constructor(
     private readonly claude: ClaudeService,
     private readonly finnhub: FinnhubService,
+    private readonly prisma: PrismaService,
   ) {}
 
   // 직접 입력으로 말풍선 생성 (Finnhub/DB 없이)
   @Post("bubble")
   async makeBubble(@Body() dto: BubbleDto) {
-    const result = await this.claude.generateBubble(dto);
-    return result;
+    return this.claude.generateBubble(dto);
   }
 
   // 실제 Finnhub 뉴스 한 건을 Claude 말풍선으로 변환 — end-to-end 검증
@@ -50,11 +76,9 @@ export class DevController {
     @Query("companyKo") companyKo?: string,
   ) {
     const news = await this.finnhub.getCompanyNews(ticker, { days: 3 });
-    if (news.length === 0) {
-      return { ticker, message: "최근 3일 뉴스가 없습니다" };
-    }
+    if (news.length === 0) return { ticker, message: "최근 3일 뉴스 없음" };
     const top = news[0]!;
-    const bubble = await this.claude.generateBubble({
+    const result = await this.claude.generateBubble({
       speakerType,
       level,
       headline: top.headline,
@@ -69,10 +93,107 @@ export class DevController {
         headline: top.headline,
         summary: top.summary?.slice(0, 200),
         url: top.url,
-        publishedAt: new Date(top.datetime * 1000).toISOString(),
       },
-      bubble: bubble.bubble,
-      usage: bubble.usage,
+      bubble: result.bubble,
+      usage: result.usage,
+    };
+  }
+
+  // 시드 파이프라인:
+  //   1. SEED_STOCKS upsert (5개 종목)
+  //   2. 각 종목 Finnhub quote → currentPrice/changePct 갱신
+  //   3. 각 종목 최근 7일 뉴스 fetch → 상위 N건 (기본 2건) Claude 말풍선 생성 → news_bubbles upsert
+  //
+  // 본격 새벽 배치 구현 전, 데이터 채우는 용도. 화자/수준 조합 폭증 막기 위해 (son, beginner) 기본 1쌍만.
+  @Post("seed")
+  async seed(@Query("perStock") perStockRaw?: string) {
+    const perStock = Math.max(1, Math.min(5, Number(perStockRaw ?? 2)));
+    const speakerType: SpeakerType = "son";
+    const level: LearningLevel = "beginner";
+
+    const summary: Array<{
+      ticker: string;
+      bubblesCreated: number;
+      currentPrice: number | null;
+      error?: string;
+    }> = [];
+    let totalBubbles = 0;
+    let totalUsage = { input: 0, output: 0 };
+
+    for (const meta of SEED_STOCKS) {
+      const t = meta.ticker;
+      this.logger.log(`[seed] ${t} start`);
+      try {
+        // 1) quote
+        const q = await this.finnhub.getQuote(t).catch(() => null);
+        const currentPrice = q?.c ?? null;
+        const changePct = q?.dp ?? null;
+
+        // 52주 high/low: 무료 플랜에선 stock-candle 막혀있으니
+        // 우선 quote로 현재가 ±20% 임의값으로 대체. 실데이터는 별도 작업.
+        const week52High = currentPrice ? Math.round(currentPrice * 1.2 * 100) / 100 : 0;
+        const week52Low = currentPrice ? Math.round(currentPrice * 0.8 * 100) / 100 : 0;
+
+        const stock = await this.prisma.stock.upsert({
+          where: { ticker: t },
+          create: { ...meta, week52High, week52Low, currentPrice, changePct },
+          update: { currentPrice, changePct, week52High, week52Low },
+        });
+
+        // 2) 최근 뉴스
+        const news = await this.finnhub.getCompanyNews(t, { days: 7 });
+        const top = news.slice(0, perStock);
+
+        let created = 0;
+        for (const n of top) {
+          // 같은 헤드라인 중복 방지: stockId + headline 같으면 skip
+          const exists = await this.prisma.newsBubble.findFirst({
+            where: { stockId: stock.id, headlineEn: n.headline, speakerType, level },
+            select: { id: true },
+          });
+          if (exists) continue;
+
+          const result = await this.claude.generateBubble({
+            speakerType,
+            level,
+            headline: n.headline,
+            summary: n.summary,
+            ticker: t,
+            companyKo: meta.nameKo,
+          });
+
+          await this.prisma.newsBubble.create({
+            data: {
+              stockId: stock.id,
+              source: n.source,
+              headlineEn: n.headline,
+              summaryEn: n.summary?.slice(0, 2000) ?? "",
+              bubbleKo: result.bubble,
+              speakerType,
+              level,
+              publishedAt: new Date(n.datetime * 1000),
+            },
+          });
+          created++;
+          totalBubbles++;
+          totalUsage.input += result.usage.inputTokens;
+          totalUsage.output += result.usage.outputTokens;
+        }
+
+        summary.push({ ticker: t, bubblesCreated: created, currentPrice });
+      } catch (err) {
+        const msg = (err as Error).message;
+        this.logger.error(`[seed] ${t} failed: ${msg}`);
+        summary.push({ ticker: t, bubblesCreated: 0, currentPrice: null, error: msg });
+      }
+    }
+
+    return {
+      ok: true,
+      perStock,
+      totalBubbles,
+      totalUsage,
+      summary,
     };
   }
 }
