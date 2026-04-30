@@ -29,8 +29,9 @@ COPY apps/api apps/api
 # 빌드 타임에도 환경변수를 요구함. 실제 DB 연결은 안 하므로 placeholder 면 OK.
 # 운영 DB URL 은 Railway Variables 로 컨테이너 시작 시 주입됨.
 RUN npm run build -w @eomni/shared
+# `-w @eomni/api` 가 cwd 를 apps/api 로 바꾸므로 schema 는 워크스페이스 기준 상대경로
 RUN DATABASE_URL="postgresql://placeholder:placeholder@placeholder:5432/placeholder" \
-    npx -w @eomni/api prisma generate --schema apps/api/prisma/schema.prisma
+    npx -w @eomni/api prisma generate --schema prisma/schema.prisma
 RUN npm run build -w @eomni/api
 
 # ─────────────────────────────────────────────
