@@ -34,12 +34,30 @@
 
 ## 2. 타이포
 
-| 용도 | 크기 | 굵기 | 비고 |
-|---|---|---|---|
-| 헤드라인 | [TODO — 현재 18px] | bold | 시니어 가독성 — 20px 이상 검토 |
-| 본문 (말풍선) | [TODO — 현재 18px] | regular | line-height 1.6 이상 |
-| 요약 | [TODO — 현재 14px] | regular | 3줄 클램프 |
-| 메타/캡션 | [TODO — 현재 12~14px] | medium | 시간·출처 |
+### 폰트 패밀리
+
+- **본문 (sans)**: `Pretendard Variable` — queenit 스택 fallback. weight 45~920 단일 variable font. OFL 라이선스, self-host
+- **디스플레이**: `Gowun Dodum` — 랜딩 페이지의 큰 헤드라인 톤 (둥근 한글 디스플레이체)
+- **숫자 (numeric)**: `Pretendard → Tahoma → Verdana` — 가격·시세표 등 강조 위치에서 `font-numeric` 클래스로 사용
+- **등폭 숫자**: 모든 숫자 표시 위치에 `tabular-nums` 유틸리티 권장 (자릿수 변해도 폭 안정)
+
+### 시맨틱 위계 (Tailwind: `text-{token}`)
+
+> 시작값. 디자이너 결정 후 조정 가능. weight는 토큰에 묶지 않고 사용처에서 명시.
+
+| 토큰 | size | line-height | letter-spacing | 권장 weight | 용도 |
+|---|---|---|---|---|---|
+| `display` | 32px | 1.2 | -0.02em | 700~800 | 랜딩 큰 헤드라인 |
+| `title` | 24px | 1.35 | -0.01em | 700 | 페이지·섹션 제목, NewsStoryView 히어로 |
+| `heading` | 19px | 1.4 | -0.005em | 600~700 | 카드 헤드라인, 모달 헤더 |
+| `body-lg` | 18px | 1.6 | 0 | 500 | lead 단락 (NewsStoryView 첫 단락) |
+| `body` | 16px | 1.6 | 0 | 400 | 일반 본문 |
+| `sub` | 14px | 1.5 | 0 | 400 | 부가 설명, 카드 sub, 메타 |
+| `caption` | 13px | 1.45 | 0 | 500 | 라벨, 칩, 작은 메타 |
+
+**시니어 친화 최저선**: `caption` 13px 이상. 10~11px 임의값 사용 금지.
+
+**기존 size scale** (`base / lg / xl / 2xl / 3xl`)은 랜딩 페이지(app/page.tsx)에서 이미 사용 중이라 호환 유지. 신규 컴포넌트는 시맨틱 토큰 사용.
 
 ## 3. 간격 & 라운드
 
