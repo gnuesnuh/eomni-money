@@ -20,4 +20,4 @@ apps/web/.next
 apps/web/node_modules
 
 README.md
-DEPLOY.md
+docs

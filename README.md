@@ -2,7 +2,8 @@
 
 > 뉴스를 아들·딸·며느리·사위가 설명해주는 시니어 주식 입문 앱
 
-기획서: [eomni-money-spec.md](./eomni-money-spec.md)
+기획서: [docs/spec/eomni-money-spec.md](./docs/spec/eomni-money-spec.md)
+배포 가이드: [docs/ops/DEPLOY.md](./docs/ops/DEPLOY.md)
 
 ## 개발 환경
 
