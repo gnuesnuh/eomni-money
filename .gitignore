@@ -36,3 +36,6 @@ Thumbs.db
 # misc
 *.tsbuildinfo
 .turbo/
+
+# Claude Code (로컬 세션/스케줄 상태)
+.claude/
