@@ -1,36 +1,22 @@
 # 엄니머니 디자인 시스템
 
 > 작성: 디자이너 | 마지막 업데이트: 2026-05-03
-> 원칙: 시니어 가독성 우선 + aurora 톤 일관성
+> 원칙: 시니어 가독성 우선
 > 운영 규칙: 토큰은 이 문서에서만 정의, 컴포넌트 노트는 토큰을 **참조**만
 
 ## 1. 색 토큰
 
-### 베이스 (aurora)
-- `bg-warm`: [TODO — 예: #FFFCF7]
-- `bg-card`: [TODO]
-- `text-primary`: [TODO]
-- `text-secondary`: [TODO]
-- `text-muted`: [TODO]
-- `border-soft`: [TODO]
-
-### 화자별 (Speaker)
-| 화자 | 색 | 비고 |
-|---|---|---|
-| son (아들) | [TODO] | 현재 `bubble-son` 토큰 사용 중 |
-| daughter (딸) | [TODO] | |
-| daughter_in_law (며느리) | [TODO] | |
-| son_in_law (사위) | [TODO] | |
-
-### 의미별 (Semantic)
-| 용도 | 현재 색 | 목표 색 |
-|---|---|---|
-| price-up (상승) | red-50 / red-600 | [TODO] |
-| price-down (하락) | blue-50 / blue-600 | [TODO] |
-| mode-easy (더 쉽게) | orange-50 / orange-700 | [TODO] |
-| mode-deep (더 자세히) | purple-50 / purple-700 | [TODO] |
-| success (이해 완료) | emerald-50 / emerald-800 | [TODO] |
-| warning (어려운 뉴스) | amber-50 / amber-800 | [TODO] |
+> 🚧 **클로드 디자인 결과 대기 중 (2026-05-03 ~)**
+>
+> 현재 시안 컴포넌트(NewsCardChat / NewsStoryView / NewsBottomSheet / BottomNav / preview 페이지)에 박혀 있는 보라·핑크·녹 등 색은 모두 **임시 더미값**. 정식 팔레트는 백지에서 새로 잡는다.
+>
+> 결과로 채울 카테고리:
+> - 베이스: 배경(앱/카드) / 텍스트 4단계(primary·secondary·muted·faint) / 보더(soft·softer)
+> - 화자: 아들 / 딸 / 사위 / 며느리 (각 50~900 스케일)
+> - 가격 등락 5단계: 강세 / 상승 / 관망 / 하락 / 약세 (한국식 vs 미국식 결정 포함)
+> - 보조 의미: 노트 강조, 어려운 뉴스 경고, 성공/이해 완료
+>
+> 결과 확정되면 이 섹션 내용 채우고 → `apps/web/tailwind.config.ts` 반영 → 시안 컴포넌트 일괄 교체.
 
 ## 2. 타이포
 
@@ -112,5 +98,6 @@ Solar에 없는 모양만 제작. **Solar의 path 톤(둥근 끝, stroke 두께)
 
 ## 7. 변경 이력
 
+- 2026-05-03 — 색 토큰 백지화. 시안의 aurora 톤은 더미로 확정, 정식 팔레트는 새로 잡기로
 - 2026-05-03 — 아이콘 정책 추가 (Solar 통일), `CloseX` 자체제작 아이콘 등록
 - 2026-05-02 — 골격 작성, NewsCard 기반 첫 분석
