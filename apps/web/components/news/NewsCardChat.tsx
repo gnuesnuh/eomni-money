@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { Icon } from "@iconify/react";
 import type { NewsCardData, SpeakerType } from "@eomni/shared";
 import { NewsStoryView } from "./NewsStoryView";
 
@@ -202,24 +203,20 @@ export function NewsCardChat({ news, onOpenChange }: NewsCardChatProps) {
               >
                 {moodEmoji}
               </div>
-              {/* 우상단 말풍선 — pulse 애니메이션 */}
-              <motion.svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
+              {/* 우상단 말풍선 — Solar chat-round-dots-bold + pulse 애니메이션 */}
+              <motion.div
                 className="absolute -top-2 -right-2 drop-shadow-md"
                 animate={{ opacity: [1, 0.55, 1], scale: [1, 1.06, 1] }}
                 transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
                 aria-hidden
               >
-                <path
-                  fill="white"
-                  d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+                <Icon
+                  icon="solar:chat-round-call-bold"
+                  width={28}
+                  height={28}
+                  color="white"
                 />
-                <circle cx="8.5" cy="11.5" r="1.2" fill={CARD_BG} />
-                <circle cx="12" cy="11.5" r="1.2" fill={CARD_BG} />
-                <circle cx="15.5" cy="11.5" r="1.2" fill={CARD_BG} />
-              </motion.svg>
+              </motion.div>
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-body font-bold text-white">

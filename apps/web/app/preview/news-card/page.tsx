@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   NewsCardChat,
   type NewsCardChatDraft,
 } from "@/components/news/NewsCardChat";
+import { BottomNav } from "@/components/layout/BottomNav";
 
 // 시안 단계 mock 데이터 — personaIntro/bubbles/life/easy/deep는 추후 실 데이터 모델에 어떻게 들어갈지 별도 합의.
 const NOW_ISO = "2026-05-02T09:30:00+09:00";
@@ -187,7 +188,7 @@ export default function NewsCardPreviewPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col bg-[#F8F4FF] pb-16">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col bg-[#F8F4FF] pb-20">
       <DevStrip />
       <AppHeader />
       <main className="flex-1 px-5 pt-10">
@@ -271,44 +272,3 @@ function AppHeader() {
   );
 }
 
-/** 하단 GNB — 모바일 시뮬레이션. 데스크톱에선 max-w-md 가운데 정렬 */
-function BottomNav() {
-  const tabs: Array<{ label: string; active: boolean }> = [
-    { label: "홈", active: true },
-    { label: "탐색", active: false },
-    { label: "저장", active: false },
-    { label: "나", active: false },
-  ];
-  return (
-    <motion.nav
-      initial={{ y: 0, opacity: 1 }}
-      exit={{ y: 24, opacity: 0 }}
-      transition={{ duration: 0.18 }}
-      className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-md justify-around border-t border-[#A25CDE]/15 bg-white/95 py-2 backdrop-blur"
-    >
-      {tabs.map(({ label, active }) => (
-        <button
-          key={label}
-          className="flex flex-col items-center gap-0.5 px-3 py-1"
-        >
-          <div
-            className={`h-[18px] w-[18px] rounded-[5px] ${
-              active
-                ? "bg-gradient-to-br from-[#7B2FBE] to-[#C4406A]"
-                : "bg-[#C8B4F0]/40"
-            }`}
-          />
-          <span
-            className={
-              active
-                ? "bg-gradient-to-br from-[#7B2FBE] to-[#C4406A] bg-clip-text text-[10px] font-bold text-transparent"
-                : "text-[10px] text-[#C4B3D8]"
-            }
-          >
-            {label}
-          </span>
-        </button>
-      ))}
-    </motion.nav>
-  );
-}

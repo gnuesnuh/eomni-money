@@ -1,6 +1,6 @@
 # 엄니머니 디자인 시스템
 
-> 작성: 디자이너 | 마지막 업데이트: 2026-05-02
+> 작성: 디자이너 | 마지막 업데이트: 2026-05-03
 > 원칙: 시니어 가독성 우선 + aurora 톤 일관성
 > 운영 규칙: 토큰은 이 문서에서만 정의, 컴포넌트 노트는 토큰을 **참조**만
 
@@ -77,13 +77,40 @@
 | FreeLimitCard | `apps/web/components/news/FreeLimitCard.tsx` | [TODO] |
 | NativeAdCard | `apps/web/components/news/NativeAdCard.tsx` | [TODO] |
 
-## 5. 사용 원칙
+## 5. 아이콘
+
+### 라이브러리
+
+- **기본**: [Solar Icon Set](https://solar-icons.vercel.app/) — `@iconify/react`로 사용
+  - inactive: `solar:[name]-linear`
+  - active / 강조: `solar:[name]-bold`
+- 다른 아이콘 라이브러리는 도입하지 않음. Solar에 적당한 게 없으면 자체 제작으로.
+
+### 활성 표현 룰 (BottomNav 등)
+
+| 아이콘 톤 | 활성 표현 |
+|---|---|
+| 두꺼운 라인 + 채움 톤 (App Store 스타일) | 컬러로 활성 표현 |
+| 얇은 라인 톤 (Solar Linear 등) | 색 변화 없이 형태(채움)로만 활성 표현 (linear → bold) |
+
+비활성도 블랙(`#111111`)으로 잘 보이게 유지.
+
+### 자체 제작 아이콘 (`apps/web/components/icons/`)
+
+Solar에 없는 모양만 제작. **Solar의 path 톤(둥근 끝, stroke 두께)을 따와서 일관성 유지**.
+
+| 컴포넌트 | 출처 | 사용처 |
+|---|---|---|
+| `CloseX` | Solar `close-circle-bold`의 안쪽 X path 추출 | 외부 frosted glass 등 별도 배경이 있는 닫기 버튼 (Solar에는 외곽선 없는 단순 X가 없음) |
+
+## 6. 사용 원칙
 
 - 새 색/사이즈/컴포넌트 추가 전 이 문서를 먼저 확인
 - 토큰 값이 확정되면 동료에게 `apps/web/tailwind.config.ts` 반영 요청
 - 컴포넌트별 노트는 `docs/design/{component}-notes.md` 패턴
 - 토큰이 정해지지 않은 항목은 `[TODO]`로 남기고, 결정 후 갱신
 
-## 6. 변경 이력
+## 7. 변경 이력
 
+- 2026-05-03 — 아이콘 정책 추가 (Solar 통일), `CloseX` 자체제작 아이콘 등록
 - 2026-05-02 — 골격 작성, NewsCard 기반 첫 분석

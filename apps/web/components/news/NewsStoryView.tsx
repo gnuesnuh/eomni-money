@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import type { SpeakerType } from "@eomni/shared";
+import { CloseX } from "@/components/icons/CloseX";
 
 // Apple App Store Today 컨셉 — 풀스크린 모달, 풀블리드 히어로, essay 본문, CTA 카드.
 // 카드와의 shared element transition은 framer-motion layoutId로 연결.
@@ -420,9 +421,9 @@ export function NewsStoryView({
         transition={{ delay: 0.4, duration: 0.2 }}
         onClick={onClose}
         aria-label="닫기"
-        className="fixed top-4 right-4 z-[60] flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-gray-900 shadow-md backdrop-blur"
+        className="fixed top-4 right-4 z-[60] flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-gray-900 shadow-md backdrop-blur"
       >
-        <span className="text-base font-medium leading-none">✕</span>
+        <CloseX size={18} />
       </motion.button>
     </>,
     document.body,
