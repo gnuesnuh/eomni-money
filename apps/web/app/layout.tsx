@@ -1,16 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_KR, Gowun_Dodum } from "next/font/google";
+import { Gowun_Dodum } from "next/font/google";
+import "pretendard/dist/web/variable/pretendardvariable.css";
 import { LocaleProvider } from "@/lib/i18n";
 import "./globals.css";
 
-const notoKr = Noto_Sans_KR({
-  subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
-  variable: "--font-noto-kr",
-  display: "swap",
-});
+// Pretendard Variable — 본문 메인 폰트. weight 45~920 단일 variable font, OFL 라이선스.
+// queenit 스택 따라 Pretendard 우선 + 시스템 폰트 fallback chain (tailwind.config.ts에 정의).
 
 // Gmarket Sans는 next/font 미지원이라 Gowun Dodum (둥근 한글 디스플레이체) 으로 대체.
+// 랜딩 페이지(app/page.tsx)의 큰 헤드라인 톤용. 본문은 Pretendard.
 const display = Gowun_Dodum({
   subsets: ["latin"],
   weight: ["400"],
@@ -36,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" className={`${notoKr.variable} ${display.variable}`}>
+    <html lang="ko" className={display.variable}>
       <body className="min-h-screen bg-stone-50 text-gray-900 antialiased font-sans">
         <LocaleProvider>{children}</LocaleProvider>
       </body>
